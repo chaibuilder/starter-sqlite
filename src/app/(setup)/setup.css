@@ -488,3 +488,43 @@ code {
   font-size: 13px;
   flex: 0 0 auto;
 }
+
+.cli-aside {
+  margin-top: 26px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  font-size: 14px;
+}
+
+.cli-aside p {
+  color: var(--muted);
+  margin: 6px 0 12px;
+}
+
+.cli-aside p:last-child {
+  margin-bottom: 0;
+}
+
+.cli-command {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-bottom: 12px;
+}
+
+.cli-command code {
+  flex: 1 1 auto;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.cli-command .link {
+  flex: 0 0 auto;
+  font-size: 13px;
+}

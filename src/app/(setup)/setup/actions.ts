@@ -5,14 +5,22 @@ import { buildPayloadConfig } from '@/payload.config'
 import { isConfigured } from '@/lib/is-configured'
 import { createAppRecord, findUserIdByEmail } from '@/lib/setup/create-app-record'
 import { describeDbError } from '@/lib/setup/status'
-import { openDb } from '@/lib/setup/db'
+import { envDbCredentials, openDb, type DbCredentials } from '@/lib/setup/db'
 import { migrations } from '@/migrations'
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string }
 
+/**
+ * Where the database credentials come from. `env` means this deployment already
+ * has them, so they are read server-side — `DATABASE_AUTH_TOKEN` is never sent
+ * to the browser and so cannot be sent back.
+ */
+export type DatabaseSource =
+  | { source: 'env' }
+  | { source: 'input'; url: string; authToken?: string }
+
 export type SetupInput = {
-  url: string
-  authToken?: string
+  database: DatabaseSource
   appName: string
   email: string
   password: string
@@ -36,6 +44,25 @@ async function hasCoreTables(credentials: { url: string; authToken?: string }): 
   } finally {
     client.close()
   }
+}
+
+/** Resolve the credentials setup should run against, or an error to show. */
+function resolveCredentials(
+  database: DatabaseSource,
+): { ok: true; credentials: DbCredentials } | { ok: false; error: string } {
+  if (database.source === 'env') {
+    const credentials = envDbCredentials()
+    if (!credentials) {
+      return {
+        ok: false,
+        error: 'The database settings on this deployment are no longer available. Reload and try again.',
+      }
+    }
+    return { ok: true, credentials }
+  }
+
+  if (!database.url) return { ok: false, error: 'Enter a database URL.' }
+  return { ok: true, credentials: { url: database.url, authToken: database.authToken } }
 }
 
 /** Reject setup requests on a deployment that is already configured. */
@@ -71,8 +98,9 @@ export async function testConnection(credentials: {
  * then seed the app record. This mirrors `chaibuilder-app create` in the CLI, so
  * the resulting database is the same either way.
  *
- * Credentials arrive with the request and are never persisted — the user copies
- * them into their host's environment variables at the end of the wizard.
+ * Credentials either arrive with the request and are never persisted — the user
+ * copies them into their host's environment variables at the end of the wizard —
+ * or already exist on the deployment, in which case they are read server-side.
  */
 export async function runSetup(input: SetupInput): Promise<ActionResult<{ appId: string }>> {
   const blocked = guard()
@@ -81,7 +109,10 @@ export async function runSetup(input: SetupInput): Promise<ActionResult<{ appId:
   const appName = input.appName.trim()
   const email = input.email.trim().toLowerCase()
 
-  if (!input.url) return { ok: false, error: 'Enter a database URL.' }
+  const resolved = resolveCredentials(input.database)
+  if (!resolved.ok) return { ok: false, error: resolved.error }
+  const credentials = resolved.credentials
+
   if (!appName) return { ok: false, error: 'Enter a name for your site.' }
   if (!email) return { ok: false, error: 'Enter an email address.' }
   if (!input.password || input.password.length < 4) {
@@ -92,21 +123,21 @@ export async function runSetup(input: SetupInput): Promise<ActionResult<{ appId:
   try {
     payload = await getPayload({
       config: buildPayloadConfig({
-        databaseUrl: input.url,
-        databaseAuthToken: input.authToken,
+        databaseUrl: credentials.url,
+        databaseAuthToken: credentials.authToken,
         secret: TRANSIENT_SECRET,
       }),
       // `getPayload` caches instances by key. The wizard connects to a database
       // that is not in the environment, so it must not take over the default
       // instance — key it by target database instead.
-      key: `setup:${input.url}`,
+      key: `setup:${credentials.url}`,
     })
   } catch (error) {
     return { ok: false, error: describeDbError(error) }
   }
 
   try {
-    if (await hasCoreTables({ url: input.url, authToken: input.authToken })) {
+    if (await hasCoreTables(credentials)) {
       // Schema is already there — a database reused from local development, or
       // a second run of setup. Migrating anyway risks Payload's interactive
       // "data loss will occur" prompt, which nothing can answer here.
@@ -129,7 +160,7 @@ export async function runSetup(input: SetupInput): Promise<ActionResult<{ appId:
   // CLI's behaviour — but only when the password proves ownership.
   let userId: string
   try {
-    const client = openDb({ url: input.url, authToken: input.authToken })
+    const client = openDb(credentials)
     let existingId: string | null = null
     try {
       existingId = await findUserIdByEmail(client, email)
@@ -162,7 +193,7 @@ export async function runSetup(input: SetupInput): Promise<ActionResult<{ appId:
     return { ok: false, error: `Could not create the admin account: ${describeDbError(error)}` }
   }
 
-  const client = openDb({ url: input.url, authToken: input.authToken })
+  const client = openDb(credentials)
   try {
     const existing = await client.execute('SELECT id FROM apps LIMIT 1')
     if (existing.rows[0]?.id) {

@@ -11,17 +11,27 @@ const PROGRESS_LABELS: { key: Exclude<Progress, 'idle' | 'done'>; label: string 
   { key: 'creating-app', label: 'Creating your site' },
 ]
 
-const STEPS = [
-  { title: 'Site name', optional: false },
-  { title: 'Database', optional: false },
-  { title: 'Admin account', optional: false },
-  { title: 'Storage & AI', optional: true },
-  { title: 'Review', optional: false },
-] as const
+type StepId = 'name' | 'database' | 'admin' | 'extras' | 'review'
+
+const ALL_STEPS: { id: StepId; title: string; optional: boolean }[] = [
+  { id: 'name', title: 'Site name', optional: false },
+  { id: 'database', title: 'Database', optional: false },
+  { id: 'admin', title: 'Admin account', optional: false },
+  { id: 'extras', title: 'Storage & AI', optional: true },
+  { id: 'review', title: 'Review', optional: false },
+]
 
 const CLI_COMMAND = 'npx chaibuilder-app create'
 
-const LAST_STEP = STEPS.length - 1
+/**
+ * Database credentials already present on this deployment, probed server-side.
+ * The auth token deliberately never crosses to the client — when the state is
+ * `ready`, setup runs against the environment credentials on the server.
+ */
+export type EnvDatabase =
+  | { state: 'absent' }
+  | { state: 'ready'; url: string }
+  | { state: 'broken'; url: string; error: string }
 
 /** 64 hex characters, the same shape the CLI generates for PAYLOAD_SECRET. */
 function generateSecret(): string {
@@ -34,12 +44,14 @@ function envLine(key: string, value: string): string {
   return `${key}=${value}`
 }
 
-export function SetupWizard() {
+export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
   const [step, setStep] = useState(0)
   const [furthestStep, setFurthestStep] = useState(0)
 
   const [appName, setAppName] = useState('')
-  const [dbUrl, setDbUrl] = useState('')
+  // A broken env URL is worth prefilling so the user can correct it rather than
+  // retype it; the token is not available here and stays blank.
+  const [dbUrl, setDbUrl] = useState(envDatabase.state === 'broken' ? envDatabase.url : '')
   const [dbToken, setDbToken] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -68,6 +80,15 @@ export function SetupWizard() {
   const mediaConfigured = Boolean(bucket.trim() && accessKeyId.trim() && secretAccessKey.trim())
   const dbKey = JSON.stringify([dbUrl.trim(), dbToken.trim()])
 
+  // Working credentials on the deployment mean there is nothing to ask for. The
+  // step stays in the rail, ticked, so it is clear it was handled rather than
+  // silently dropped — but it is not one of the steps the wizard walks through.
+  const useEnvDatabase = envDatabase.state === 'ready'
+  const steps = ALL_STEPS.filter((s) => !(useEnvDatabase && s.id === 'database'))
+  const stepIndex = Math.min(step, steps.length - 1)
+  const current = steps[stepIndex]
+  const isLast = stepIndex === steps.length - 1
+
   // Keyboard and screen-reader users would otherwise stay focused wherever the
   // previous step's button was. Skipped on first render, where there is no
   // previous step and the focus ring would just look like a stray outline.
@@ -77,7 +98,15 @@ export function SetupWizard() {
     else mounted.current = true
   }, [step])
 
-  function goTo(next: number) {
+  function goTo(id: StepId) {
+    const next = steps.findIndex((s) => s.id === id)
+    if (next < 0) return
+    setStepError(null)
+    setStep(next)
+    setFurthestStep((f) => Math.max(f, next))
+  }
+
+  function goToIndex(next: number) {
     setStepError(null)
     setStep(next)
     setFurthestStep((f) => Math.max(f, next))
@@ -85,10 +114,10 @@ export function SetupWizard() {
 
   /** Returns an error message, or null when the step may be left. */
   async function validateStep(): Promise<string | null> {
-    switch (step) {
-      case 0:
+    switch (current.id) {
+      case 'name':
         return appName.trim() ? null : 'Enter a name for your site.'
-      case 1: {
+      case 'database': {
         if (!dbUrl.trim()) return 'Enter your database URL.'
         if (verifiedDb === dbKey) return null
         setChecking(true)
@@ -98,13 +127,13 @@ export function SetupWizard() {
         setVerifiedDb(dbKey)
         return null
       }
-      case 2:
+      case 'admin':
         if (!email.trim()) return 'Enter an email address.'
         if (!email.includes('@')) return 'That does not look like an email address.'
         if (password.length < 4) return 'Password must be at least 4 characters.'
         if (password !== confirmPassword) return 'The two passwords do not match.'
         return null
-      case 3: {
+      case 'extras': {
         // A partial bucket config silently produces a site whose uploads do not
         // persist, so require all three values together or none at all.
         const filled = [bucket, accessKeyId, secretAccessKey].filter((v) => v.trim()).length
@@ -125,13 +154,13 @@ export function SetupWizard() {
       setStepError(error)
       return
     }
-    goTo(Math.min(step + 1, LAST_STEP))
+    goToIndex(Math.min(stepIndex + 1, steps.length - 1))
   }
 
   function skipStep() {
     // Clearing the fields keeps the review summary and the generated settings
     // honest about what was skipped.
-    if (step === 3) {
+    if (current.id === 'extras') {
       setBucket('')
       setAccessKeyId('')
       setSecretAccessKey('')
@@ -139,7 +168,7 @@ export function SetupWizard() {
       setS3Region('')
       setAiKey('')
     }
-    goTo(Math.min(step + 1, LAST_STEP))
+    goToIndex(Math.min(stepIndex + 1, steps.length - 1))
   }
 
   async function handleCreate() {
@@ -154,8 +183,9 @@ export function SetupWizard() {
     ]
 
     const result = await runSetup({
-      url: dbUrl.trim(),
-      authToken: dbToken.trim() || undefined,
+      database: useEnvDatabase
+        ? { source: 'env' }
+        : { source: 'input', url: dbUrl.trim(), authToken: dbToken.trim() || undefined },
       appName: appName.trim(),
       email: email.trim(),
       password,
@@ -176,8 +206,14 @@ export function SetupWizard() {
     const siteUrl = typeof window === 'undefined' ? '' : window.location.origin
     const lines = [
       '# --- Required ---',
-      envLine('DATABASE_URL', dbUrl.trim()),
-      ...(dbToken.trim() ? [envLine('DATABASE_AUTH_TOKEN', dbToken.trim())] : []),
+      // Already set on this deployment when the credentials came from the
+      // environment; the auth token is not available here in any case.
+      ...(useEnvDatabase
+        ? []
+        : [
+            envLine('DATABASE_URL', dbUrl.trim()),
+            ...(dbToken.trim() ? [envLine('DATABASE_AUTH_TOKEN', dbToken.trim())] : []),
+          ]),
       envLine('PAYLOAD_SECRET', secret),
       envLine('CHAIBUILDER_APP_KEY', appId),
       envLine('NEXT_PUBLIC_SERVER_URL', siteUrl),
@@ -210,6 +246,9 @@ export function SetupWizard() {
         <div className="card">
           <h2>1. Copy your settings</h2>
           <p className="hint">
+            {useEnvDatabase
+              ? 'Your database settings are already on this deployment, so they are not repeated here — these are the ones still missing. '
+              : ''}
             This is the only time the password-like values are shown. Keep them somewhere safe until
             you have finished step 2.
           </p>
@@ -277,8 +316,6 @@ export function SetupWizard() {
     )
   }
 
-  const current = STEPS[step]
-
   return (
     <div className="wrap">
       <div className="brand">ChaiBuilder</div>
@@ -288,19 +325,34 @@ export function SetupWizard() {
       </p>
 
       <ol className="stepper">
-        {STEPS.map((s, index) => {
-          const state = index === step ? 'current' : index < step ? 'done' : 'todo'
+        {ALL_STEPS.map((entry) => {
+          if (useEnvDatabase && entry.id === 'database') {
+            return (
+              <li key={entry.id} className="done satisfied">
+                <span className="stepper-link">
+                  <span className="stepper-num">✓</span>
+                  <span className="stepper-title">{entry.title}</span>
+                </span>
+              </li>
+            )
+          }
+          const index = steps.findIndex((s) => s.id === entry.id)
+          const state = index === stepIndex ? 'current' : index < stepIndex ? 'done' : 'todo'
           const reachable = index <= furthestStep && !running
           return (
-            <li key={s.title} className={state} aria-current={index === step ? 'step' : undefined}>
+            <li
+              key={entry.id}
+              className={state}
+              aria-current={index === stepIndex ? 'step' : undefined}
+            >
               <button
                 type="button"
                 className="stepper-link"
-                disabled={!reachable || index === step}
-                onClick={() => goTo(index)}
+                disabled={!reachable || index === stepIndex}
+                onClick={() => goTo(entry.id)}
               >
                 <span className="stepper-num">{state === 'done' ? '✓' : index + 1}</span>
-                <span className="stepper-title">{s.title}</span>
+                <span className="stepper-title">{entry.title}</span>
               </button>
             </li>
           )
@@ -315,7 +367,7 @@ export function SetupWizard() {
           {current.optional && <span className="optional-tag">Optional</span>}
         </div>
 
-        {step === 0 && (
+        {current.id === 'name' && (
           <>
             <p className="hint">You can change this later.</p>
             <label htmlFor="appName">Site name</label>
@@ -356,8 +408,14 @@ export function SetupWizard() {
           </>
         )}
 
-        {step === 1 && (
+        {current.id === 'database' && (
           <>
+            {envDatabase.state === 'broken' && (
+              <div className="note warn">
+                This deployment has database settings, but we could not use them: {envDatabase.error}{' '}
+                Enter them again below.
+              </div>
+            )}
             <p className="hint">
               Your site stores its pages and content in a database. Turso offers a free one that
               works well here.
@@ -399,7 +457,7 @@ export function SetupWizard() {
           </>
         )}
 
-        {step === 2 && (
+        {current.id === 'admin' && (
           <>
             <p className="hint">This is how you will sign in to edit your site.</p>
 
@@ -431,7 +489,7 @@ export function SetupWizard() {
           </>
         )}
 
-        {step === 3 && (
+        {current.id === 'extras' && (
           <>
             <p className="hint">
               Both of these can be added later — skip if you do not have the details handy.
@@ -518,25 +576,29 @@ export function SetupWizard() {
           </>
         )}
 
-        {step === LAST_STEP && (
+        {current.id === 'review' && (
           <>
             <p className="hint">
               Check everything below, then we will create your database tables, your admin account,
               and your site.
             </p>
             <dl className="review-list">
-              <ReviewRow label="Site name" value={appName.trim()} onEdit={() => goTo(0)} />
-              <ReviewRow label="Database" value={dbUrl.trim()} onEdit={() => goTo(1)} />
-              <ReviewRow label="Admin email" value={email.trim()} onEdit={() => goTo(2)} />
+              <ReviewRow label="Site name" value={appName.trim()} onEdit={() => goTo('name')} />
+              {useEnvDatabase ? (
+                <ReviewRow label="Database" value="Already configured on this deployment" />
+              ) : (
+                <ReviewRow label="Database" value={dbUrl.trim()} onEdit={() => goTo('database')} />
+              )}
+              <ReviewRow label="Admin email" value={email.trim()} onEdit={() => goTo('admin')} />
               <ReviewRow
                 label="Media storage"
                 value={mediaConfigured ? bucket.trim() : null}
-                onEdit={() => goTo(3)}
+                onEdit={() => goTo('extras')}
               />
               <ReviewRow
                 label="AI"
                 value={aiKey.trim() ? 'OpenRouter key added' : null}
-                onEdit={() => goTo(3)}
+                onEdit={() => goTo('extras')}
               />
             </dl>
             {!mediaConfigured && (
@@ -566,8 +628,13 @@ export function SetupWizard() {
         )}
 
         <div className="step-nav">
-          {step > 0 && (
-            <button type="button" className="secondary" onClick={() => goTo(step - 1)} disabled={running}>
+          {stepIndex > 0 && (
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => goToIndex(stepIndex - 1)}
+              disabled={running}
+            >
               Back
             </button>
           )}
@@ -577,7 +644,7 @@ export function SetupWizard() {
                 Skip for now
               </button>
             )}
-            {step === LAST_STEP ? (
+            {isLast ? (
               <button type="button" onClick={handleCreate} disabled={running}>
                 {running ? 'Setting up…' : 'Create my site'}
               </button>
@@ -606,16 +673,18 @@ function ReviewRow({
 }: {
   label: string
   value: string | null
-  onEdit: () => void
+  onEdit?: () => void
 }) {
   return (
     <div className="review-row">
       <dt>{label}</dt>
       <dd>
         {value ? <span>{value}</span> : <span className="muted-value">Skipped</span>}
-        <button type="button" className="link" onClick={onEdit}>
-          Change
-        </button>
+        {onEdit && (
+          <button type="button" className="link" onClick={onEdit}>
+            Change
+          </button>
+        )}
       </dd>
     </div>
   )

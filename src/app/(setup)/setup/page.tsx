@@ -1,7 +1,8 @@
 import { adminUrl } from '@/utilities/adminRoute'
 import { isConfigured } from '@/lib/is-configured'
-import { getSetupStatus } from '@/lib/setup/status'
-import { SetupWizard } from './wizard'
+import { envDbCredentials, openDb } from '@/lib/setup/db'
+import { describeDbError, getSetupStatus } from '@/lib/setup/status'
+import { SetupWizard, type EnvDatabase } from './wizard'
 
 // Setup reflects live environment and database state, so it must never be
 // cached or prerendered.
@@ -9,9 +10,31 @@ export const dynamic = 'force-dynamic'
 
 const BADGE_SYMBOL = { ok: '✓', warn: '!', error: '✕' } as const
 
+/**
+ * Whether this deployment already carries usable database credentials, e.g. the
+ * user filled them in while deploying. When they work the wizard skips asking.
+ *
+ * Only the URL is returned: `DATABASE_AUTH_TOKEN` must never reach the browser,
+ * so setup runs against the environment credentials server-side instead.
+ */
+async function probeEnvDatabase(): Promise<EnvDatabase> {
+  const credentials = envDbCredentials()
+  if (!credentials) return { state: 'absent' }
+
+  const client = openDb(credentials)
+  try {
+    await client.execute('SELECT 1')
+    return { state: 'ready', url: credentials.url }
+  } catch (error) {
+    return { state: 'broken', url: credentials.url, error: describeDbError(error) }
+  } finally {
+    client.close()
+  }
+}
+
 export default async function SetupPage() {
   if (!isConfigured()) {
-    return <SetupWizard />
+    return <SetupWizard envDatabase={await probeEnvDatabase()} />
   }
 
   const status = await getSetupStatus()

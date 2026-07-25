@@ -4,6 +4,7 @@ import payloadConfig from '@payload-config'
 import type { MetadataRoute } from 'next'
 import { getPayload } from 'payload'
 import { getServerSideURL } from '@/utilities/getURL'
+import { isConfigured } from '@/lib/is-configured'
 import { appWhere, hasSlugField, resolveAppId } from 'chaipro/payload'
 
 const EXCLUDE_COLLECTIONS = ['users', 'media']
@@ -52,6 +53,9 @@ export function mergeSitemapEntries(entryGroups: MetadataRoute.Sitemap[]): Metad
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // No database to list pages from until setup has been completed.
+  if (!isConfigured()) return []
+
   const localConfig = await chaiConfig
   const payloadCfg = await payloadConfig
   const cb = await getChaiBuilder()

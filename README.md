@@ -1,67 +1,116 @@
-# ChaiBuilder
+# ChaiBuilder Starter
 
-This is a ChaiBuilder project using Next.js and Payload CMS.
+A website builder you host yourself, built with Next.js and Payload CMS.
 
-## Quick start
+## Deploy your site
 
-This project can be deployed directly from our Cloud hosting and it will setup MongoDB and cloud S3 object storage for media.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fchaibuilder%2Fchaibuilder-starter&project-name=my-chai-site&repository-name=my-chai-site)
 
-## Quick Start - local setup
+Click the button above. Vercel copies this project to your own GitHub account and
+puts it online — you do not need to fill in any settings yet.
 
-To spin up this project locally, follow these steps:
+When the deployment finishes, **open your new site and add `/setup` to the
+address**, for example `https://my-chai-site.vercel.app/setup`. A short wizard
+walks you through the rest:
 
-### Clone
+1. **Name your site.**
+2. **Connect a database.** Free to create; the wizard links to
+   [Turso](https://turso.tech) and explains what to copy.
+3. **Create your login.** Pick the email address and password you will use to
+   edit your site.
+4. **Media storage** (recommended) and **AI features** (optional).
 
-After you click the `Deploy` button above, you'll want to have standalone copy of this repo on your machine. If you've already cloned this repo, skip to [Development](#development).
+The wizard then creates your database tables, your account, and your site, and
+shows you a block of settings to copy.
 
-### Development
+Paste those settings into Vercel under **Settings → Environment Variables**, then
+**redeploy** from the **Deployments** tab. That is it — sign in at `/admin` and
+start building.
 
-1. First [clone the repo](#clone) if you have not done so already
-2. `cd my-project && cp .env.example .env` to copy the example environment variables. You'll need to add the `MONGODB_URL` from your Cloud project to your `.env` if you want to use S3 storage and the MongoDB database that was created for you.
+> **Why the extra redeploy?** The settings include your database password and
+> other secrets. They belong in your hosting provider's settings, not in the
+> code, and a site only picks up new settings when it is deployed again.
 
-3. `pnpm install && pnpm dev` to install dependencies and start the dev server
-4. open `http://localhost:3000` to open the app in your browser
+Nothing you type into the wizard is stored on the server. It runs on your own
+deployment, talks to your own database, and hands the values back to you.
 
-That's it! Changes made in `./src` will be reflected in your app. Follow the on-screen instructions to login and create your first admin user. Then check out [Production](#production) once you're ready to build and serve your app, and [Deployment](#deployment) when you're ready to go live.
+### Deploying somewhere else
 
-#### Docker (Optional)
+Any host that runs Next.js works — the process is the same. On Netlify, the
+settings screen is **Site configuration → Environment variables → Import from a
+.env file**, then redeploy.
 
-If you prefer to use Docker for local development instead of a local MongoDB instance, the provided docker-compose.yml file can be used.
+## Environment variables
 
-To do so, follow these steps:
+`/setup` generates these for you, but you can also set them by hand. See
+[`.env.example`](./.env.example) for the full list with comments.
 
-- Modify the `MONGODB_URL` in your `.env` file to `mongodb://127.0.0.1/<dbname>`
-- Modify the `docker-compose.yml` file's `MONGODB_URL` to match the above `<dbname>`
-- Run `docker-compose up` to start the database, optionally pass `-d` to run in the background.
+| Variable | Required | What it is |
+| --- | --- | --- |
+| `DATABASE_URL` | Yes | Where content is stored. A local file, or a `libsql://` address for a hosted database. |
+| `DATABASE_AUTH_TOKEN` | For hosted databases | The token that grants access to it. |
+| `PAYLOAD_SECRET` | Yes | Signs login sessions. Generate with `openssl rand -hex 32`. |
+| `CHAIBUILDER_APP_KEY` | Yes | Identifies your site in the database. |
+| `NEXT_PUBLIC_SERVER_URL` | Recommended | Your site's public address, used in sitemaps and share links. |
+| `BUCKET_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Recommended | Object storage for uploads. **Without these, uploaded images are lost on every deploy.** `S3_ENDPOINT` is also needed for Cloudflare R2. |
+| `OPENROUTER_API_KEY` | Optional | Enables AI-assisted editing. |
+| `PAYLOAD_ADMIN_ROUTE` | Optional | Serves the admin panel from a custom path. |
 
-## How it works
+Visit `/setup` on a configured site at any time to see which of these are in
+place and which are still missing.
 
-The Payload config is tailored specifically to the needs of most websites. It is pre-configured in the following ways:
+## Local development
 
-### Collections
+The quickest way to start a new project locally is the CLI, which does the same
+setup work as the wizard and writes a `.env` for you:
 
-See the [Collections](https://payloadcms.com/docs/configuration/collections) docs for details on how to extend this functionality.
+```bash
+npx chaibuilder-app create
+```
 
-- #### Users (Authentication)
+To run this repository directly:
 
-  Users are auth-enabled collections that have access to the admin panel.
+```bash
+cp .env.example .env      # then fill in DATABASE_URL and PAYLOAD_SECRET
+pnpm install
+pnpm dev
+```
 
-  For additional help, see the official [Auth Example](https://github.com/payloadcms/payload/tree/3.x/examples/auth) or the [Authentication](https://payloadcms.com/docs/authentication/overview#authentication-overview) docs.
+Open `http://localhost:3000/setup` to create your account and site, then add the
+printed `CHAIBUILDER_APP_KEY` to your `.env` and restart.
 
-- #### Media
+Requires Node.js 20.9+ and pnpm 9+.
 
-  This is the uploads enabled collection. It features pre-configured sizes, focal point and manual resizing to help you manage your pictures.
+## Media storage
 
-### Docker
+Hosts like Vercel and Netlify do not keep files that your site writes to disk, so
+uploads must go to object storage. Cloudflare R2 and Amazon S3 both work:
 
-Alternatively, you can use [Docker](https://www.docker.com) to spin up this project locally. To do so, follow these steps:
+1. Create a bucket.
+2. Create an API token for it with read and write access.
+3. Add `BUCKET_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (plus
+   `S3_ENDPOINT` for R2) to your environment variables and redeploy.
 
-1. Follow [steps 1 and 2 from above](#development), the docker-compose file will automatically use the `.env` file in your project root
-1. Next run `docker-compose up`
-1. Follow [steps 4 and 5 from above](#development) to login and create your first admin user
+## Database migrations
 
-That's it! The Docker instance will help you get up and running quickly while also standardizing the development environment across your teams.
+Database tables are created from the migrations in `src/migrations`. They run
+automatically when a production server starts, and when `/setup` first prepares
+your database. To create a new migration after changing a collection:
 
-## Questions
+```bash
+pnpm payload migrate:create
+```
 
-If you have any issues or questions, reach out to us on [Discord](https://discord.com/invite/payload) or start a [GitHub discussion](https://github.com/payloadcms/payload/discussions).
+## Useful commands
+
+| Command | What it does |
+| --- | --- |
+| `pnpm dev` | Start the development server |
+| `pnpm build` | Build for production |
+| `pnpm start` | Run the production build |
+| `pnpm test:int` | Run integration tests |
+| `pnpm test:e2e` | Run end-to-end tests |
+
+## Documentation
+
+Full documentation is at [chaibuilder.com/docs](https://www.chaibuilder.com/docs).

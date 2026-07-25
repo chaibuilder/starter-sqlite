@@ -1,6 +1,7 @@
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
 import { seoPlugin } from '@payloadcms/plugin-seo'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { s3Storage } from '@payloadcms/storage-s3'
 import { chaiBuilderPlugin, chaiBuilderSchemaHookSqlite } from 'chaipro/payload'
 import path from 'path'
 import { buildConfig } from 'payload'
@@ -12,104 +13,161 @@ import { FormSubmissions } from './collections/FormSubmissions'
 import { Media } from './collections/Media'
 import { SiteConfig } from './collections/SiteConfig'
 import { Users } from './collections/Users'
+import { migrations } from './migrations'
 
 import { getAdminRoute } from '@/utilities/adminRoute'
+import { getAppStoragePrefix } from '@/utilities/getAppStoragePrefix'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
-export default buildConfig({
-  routes: {
-    admin: getAdminRoute(),
-  },
-  localization: {
-    defaultLocale: 'en',
-    locales: ['en'],
-    fallback: true,
-  },
-  admin: {
-    user: Users.slug,
-    importMap: {
-      baseDir: path.resolve(dirname),
+/**
+ * Placeholder connection used when DATABASE_URL is unset. A fresh deployment
+ * (e.g. "Deploy to Vercel" with no environment variables) must still boot far
+ * enough to serve `/setup`; every other route is redirected there by
+ * `src/proxy.ts`, so this database is never actually read from or written to.
+ */
+const PLACEHOLDER_DATABASE_URL = 'file:/tmp/chai-placeholder.db'
+const PLACEHOLDER_SECRET = 'chai-unconfigured-placeholder-secret'
+
+export type PayloadConfigOverrides = {
+  databaseUrl?: string
+  databaseAuthToken?: string
+  secret?: string
+}
+
+/**
+ * Media uploads only survive a redeploy when object storage is configured; the
+ * `/setup` status page surfaces this so the user is not silently losing files.
+ */
+export const mediaStorageActive = Boolean(
+  process.env.BUCKET_NAME && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY,
+)
+
+/**
+ * Builds the Payload config. The overrides let the `/setup` wizard boot a
+ * throwaway instance against credentials the user has just typed in, before
+ * those credentials exist as environment variables on the deployment.
+ */
+export function buildPayloadConfig(overrides: PayloadConfigOverrides = {}) {
+  const databaseUrl = overrides.databaseUrl || process.env.DATABASE_URL || PLACEHOLDER_DATABASE_URL
+  const databaseAuthToken =
+    overrides.databaseAuthToken ?? process.env.DATABASE_AUTH_TOKEN ?? undefined
+  const secret = overrides.secret || process.env.PAYLOAD_SECRET || PLACEHOLDER_SECRET
+
+  return buildConfig({
+    routes: {
+      admin: getAdminRoute(),
     },
-    meta: {
-      titleSuffix: '| ChaiBuilder',
-      description: 'ChaiBuilder CMS',
-      icons: [
-        {
-          rel: 'icon',
-          type: 'image/svg+xml',
-          url: '/favicon.svg',
-        },
-      ],
-      openGraph: {
-        title: 'ChaiBuilder',
-        siteName: 'ChaiBuilder',
-        images: [
+    localization: {
+      defaultLocale: 'en',
+      locales: ['en'],
+      fallback: true,
+    },
+    admin: {
+      user: Users.slug,
+      importMap: {
+        baseDir: path.resolve(dirname),
+      },
+      meta: {
+        titleSuffix: '| ChaiBuilder',
+        description: 'ChaiBuilder CMS',
+        icons: [
           {
+            rel: 'icon',
+            type: 'image/svg+xml',
             url: '/favicon.svg',
-            width: 48,
-            height: 48,
           },
         ],
-      },
-    },
-    components: {
-      providers: ['chaipro/payload/client#IframeBridge'],
-      graphics: {
-        Logo: '@/components/admin/Logo#Logo',
-        Icon: '@/components/admin/Icon#Icon',
-      },
-      views: {
-        login: {
-          Component: '@/components/CustomLoginView#CustomLoginView',
+        openGraph: {
+          title: 'ChaiBuilder',
+          siteName: 'ChaiBuilder',
+          images: [
+            {
+              url: '/favicon.svg',
+              width: 48,
+              height: 48,
+            },
+          ],
         },
       },
+      components: {
+        providers: ['chaipro/payload/client#IframeBridge'],
+        graphics: {
+          Logo: '@/components/admin/Logo#Logo',
+          Icon: '@/components/admin/Icon#Icon',
+        },
+        views: {
+          login: {
+            Component: '@/components/CustomLoginView#CustomLoginView',
+          },
+        },
+      },
+      theme: 'dark',
     },
-    theme: 'dark',
-  },
-  collections: [
-    Users,
-    Blog,
-    BlogCategories,
-    Media,
-    SiteConfig,
-    FormSubmissions,
-  ],
-  globals: [],
-  editor: lexicalEditor(),
-  secret: process.env.PAYLOAD_SECRET || '',
-  typescript: {
-    outputFile: path.resolve(dirname, 'payload-types.ts'),
-  },
-  db: sqliteAdapter({
-    client: {
-      url: process.env.DATABASE_URL!,
-      authToken: process.env.DATABASE_AUTH_TOKEN || undefined,
+    collections: [Users, Blog, BlogCategories, Media, SiteConfig, FormSubmissions],
+    globals: [],
+    editor: lexicalEditor(),
+    secret,
+    typescript: {
+      outputFile: path.resolve(dirname, 'payload-types.ts'),
     },
-    push: process.env.PAYLOAD_DB_PUSH === 'true',
-    beforeSchemaInit: [chaiBuilderSchemaHookSqlite],
-    idType: 'uuid',
-    transactionOptions: {},
-  }),
-  sharp,
-  plugins: [
-    seoPlugin({
-      collections: ['blog', 'site-config'],
-      uploadsCollection: 'media',
-      generateTitle: ({ doc }) => doc?.title || doc?.name || '',
-      generateDescription: ({ doc }) => doc?.excerpt || doc?.tagline || doc?.title || '',
-      tabbedUI: true,
+    db: sqliteAdapter({
+      client: {
+        url: databaseUrl,
+        authToken: databaseAuthToken,
+      },
+      push: process.env.PAYLOAD_DB_PUSH === 'true',
+      beforeSchemaInit: [chaiBuilderSchemaHookSqlite],
+      idType: 'uuid',
+      transactionOptions: {},
+      migrationDir: path.resolve(dirname, 'migrations'),
+      // Applies any pending migration during `payload.init` in production, so a
+      // deployment pointed at a fresh database creates its schema on first boot.
+      prodMigrations: migrations,
     }),
-    chaiBuilderPlugin({
-      revalidateCollections: ['blog'],
-      appCollections: [
-        'blog',
-        'blog-categories',
-        'media',
-        'site-config',
-        'form-submissions',
-      ],
-    }),
-  ],
-})
+    sharp,
+    plugins: [
+      seoPlugin({
+        collections: ['blog', 'site-config'],
+        uploadsCollection: 'media',
+        generateTitle: ({ doc }) => doc?.title || doc?.name || '',
+        generateDescription: ({ doc }) => doc?.excerpt || doc?.tagline || doc?.title || '',
+        tabbedUI: true,
+      }),
+      chaiBuilderPlugin({
+        revalidateCollections: ['blog'],
+        appCollections: [
+          'blog',
+          'blog-categories',
+          'media',
+          'site-config',
+          'form-submissions',
+        ],
+      }),
+      // Local disk uploads do not survive a redeploy on serverless hosts, so S3
+      // is registered whenever the bucket credentials are present. The app key
+      // is required too, since the storage prefix is derived from it.
+      ...(mediaStorageActive && process.env.CHAIBUILDER_APP_KEY
+        ? [
+            s3Storage({
+              collections: {
+                media: { prefix: getAppStoragePrefix() },
+              },
+              bucket: process.env.BUCKET_NAME!,
+              config: {
+                credentials: {
+                  accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+                  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+                },
+                region: process.env.S3_REGION || 'auto',
+                endpoint: process.env.S3_ENDPOINT || undefined,
+              },
+            }),
+          ]
+        : []),
+    ],
+  })
+}
+
+export default buildPayloadConfig()

@@ -93,12 +93,17 @@ uploads must go to object storage. Cloudflare R2 and Amazon S3 both work:
 
 ## Database migrations
 
-Database tables are created from the migrations in `src/migrations`. They run
-automatically when a production server starts, and when `/setup` first prepares
-your database. To create a new migration after changing a collection:
+Database tables are created from the migrations in `src/migrations`. `/setup`
+applies them when it first prepares an empty database.
+
+They are deliberately **not** applied automatically on every production start:
+against a database whose tables came from `PAYLOAD_DB_PUSH`, Payload asks an
+interactive "data loss will occur" question that a build or a serverless boot
+cannot answer. After upgrading the starter, apply any new migrations yourself:
 
 ```bash
-pnpm payload migrate:create
+pnpm payload migrate           # apply pending migrations
+pnpm payload migrate:create    # create one after changing a collection
 ```
 
 ## Useful commands

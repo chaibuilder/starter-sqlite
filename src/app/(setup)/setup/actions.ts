@@ -25,6 +25,19 @@ export type SetupInput = {
  */
 const TRANSIENT_SECRET = 'chai-setup-transient-secret'
 
+/** Whether the database already has the core tables, i.e. schema work is done. */
+async function hasCoreTables(credentials: { url: string; authToken?: string }): Promise<boolean> {
+  const client = openDb(credentials)
+  try {
+    const result = await client.execute(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('users', 'apps')",
+    )
+    return result.rows.length === 2
+  } finally {
+    client.close()
+  }
+}
+
 /** Reject setup requests on a deployment that is already configured. */
 function guard(): string | null {
   return isConfigured()
@@ -93,11 +106,18 @@ export async function runSetup(input: SetupInput): Promise<ActionResult<{ appId:
   }
 
   try {
-    // Pass the migrations explicitly: the default path reads migration files
-    // from disk, which is not reliable inside a bundled serverless deployment.
-    // The cast bridges Payload's `(args: unknown)` migration signature and the
-    // typed arguments its own generator emits.
-    await payload.db.migrate({ migrations: migrations as unknown as Migration[] })
+    if (await hasCoreTables({ url: input.url, authToken: input.authToken })) {
+      // Schema is already there — a database reused from local development, or
+      // a second run of setup. Migrating anyway risks Payload's interactive
+      // "data loss will occur" prompt, which nothing can answer here.
+      payload.logger.info('Setup: database already has tables, skipping migration.')
+    } else {
+      // Pass the migrations explicitly: the default path reads migration files
+      // from disk, which is not reliable inside a bundled serverless deployment.
+      // The cast bridges Payload's `(args: unknown)` migration signature and the
+      // typed arguments its own generator emits.
+      await payload.db.migrate({ migrations: migrations as unknown as Migration[] })
+    }
   } catch (error) {
     return {
       ok: false,

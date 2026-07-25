@@ -13,7 +13,6 @@ import { FormSubmissions } from './collections/FormSubmissions'
 import { Media } from './collections/Media'
 import { SiteConfig } from './collections/SiteConfig'
 import { Users } from './collections/Users'
-import { migrations } from './migrations'
 
 import { getAdminRoute } from '@/utilities/adminRoute'
 import { getAppStoragePrefix } from '@/utilities/getAppStoragePrefix'
@@ -122,9 +121,11 @@ export function buildPayloadConfig(overrides: PayloadConfigOverrides = {}) {
       idType: 'uuid',
       transactionOptions: {},
       migrationDir: path.resolve(dirname, 'migrations'),
-      // Applies any pending migration during `payload.init` in production, so a
-      // deployment pointed at a fresh database creates its schema on first boot.
-      prodMigrations: migrations,
+      // Deliberately no `prodMigrations`: it migrates on every production
+      // `payload.init`, including during `next build`. Against a database whose
+      // schema came from Drizzle push, that hits an interactive "data loss will
+      // occur" prompt which has nothing to answer it, and the build hangs.
+      // `/setup` migrates explicitly instead; upgrades run `payload migrate`.
     }),
     sharp,
     plugins: [

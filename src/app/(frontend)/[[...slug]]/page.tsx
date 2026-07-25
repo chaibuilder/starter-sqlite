@@ -6,7 +6,6 @@ import { PreviewBanner } from 'chaipro/nextjs/render-client'
 import { loadWebBlocks } from 'chaipro/web-blocks'
 import type { Metadata } from 'next'
 import { draftMode } from 'next/headers'
-import { isConfigured } from '@/lib/is-configured'
 
 registerProjectFonts()
 loadWebBlocks()
@@ -23,10 +22,6 @@ const getSlugFromParams = (slug?: string[]) =>
   slug && slug.length > 0 ? `/${slug.join('/')}` : '/'
 
 export const generateMetadata = async (props: PageProps): Promise<Metadata> => {
-  // Before setup there is no database to read a page from. This is reachable at
-  // build time, where middleware does not run.
-  if (!isConfigured()) return { title: 'Set up your site' }
-
   const { slug: slugParams } = await props.params
   const slug = getSlugFromParams(slugParams)
   const cb = await getChaiBuilder(props)
@@ -35,20 +30,6 @@ export const generateMetadata = async (props: PageProps): Promise<Metadata> => {
 }
 
 export default async function Page(props: PageProps) {
-  // Rendered only when this deployment has not been set up yet; visitors are
-  // redirected to `/setup` by middleware, but the build still prerenders here.
-  if (!isConfigured()) {
-    return (
-      <html lang="en">
-        <body>
-          <p>
-            This site has not been set up yet. <a href="/setup">Finish setup</a>.
-          </p>
-        </body>
-      </html>
-    )
-  }
-
   const { slug: slugParams } = await props.params
   const slug = getSlugFromParams(slugParams)
   const cb = await getChaiBuilder(props)

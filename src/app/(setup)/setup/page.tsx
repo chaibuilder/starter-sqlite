@@ -2,7 +2,7 @@ import { adminUrl } from '@/utilities/adminRoute'
 import { isConfigured } from '@/lib/is-configured'
 import { envDbCredentials, openDb } from '@/lib/setup/db'
 import { describeDbError, getSetupStatus } from '@/lib/setup/status'
-import { SetupWizard, type EnvDatabase } from './wizard'
+import { SetupWizard, type EnvDatabase, type EnvExtras } from './wizard'
 
 // Setup reflects live environment and database state, so it must never be
 // cached or prerendered.
@@ -32,9 +32,25 @@ async function probeEnvDatabase(): Promise<EnvDatabase> {
   }
 }
 
+/**
+ * Optional services this deployment already carries settings for.
+ *
+ * Presence only — unlike the database there is no cheap round-trip that proves
+ * an S3 bucket or an AI key works, so the wizard says "already set" rather than
+ * claiming it verified them.
+ */
+function probeEnvExtras(): EnvExtras {
+  return {
+    media: Boolean(
+      process.env.BUCKET_NAME && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY,
+    ),
+    ai: Boolean(process.env.OPENROUTER_API_KEY || process.env.OPENAI_COMPATIBLE_API_KEY),
+  }
+}
+
 export default async function SetupPage() {
   if (!isConfigured()) {
-    return <SetupWizard envDatabase={await probeEnvDatabase()} />
+    return <SetupWizard envDatabase={await probeEnvDatabase()} envExtras={probeEnvExtras()} />
   }
 
   const status = await getSetupStatus()

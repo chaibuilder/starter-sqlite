@@ -33,6 +33,19 @@ export type EnvDatabase =
   | { state: 'ready'; url: string }
   | { state: 'broken'; url: string; error: string }
 
+/**
+ * Optional services already configured on the deployment. Presence only: there
+ * is no cheap check that proves a bucket or an AI key works, so these are
+ * reported as "already set", never as verified.
+ */
+export type EnvExtras = { media: boolean; ai: boolean }
+
+/**
+ * The two AI providers ChaiBuilder reads keys for. Vercel's AI Gateway is an
+ * OpenAI-compatible endpoint, so it goes through the second one.
+ */
+type AiProvider = 'openrouter' | 'compatible'
+
 /** 64 hex characters, the same shape the CLI generates for PAYLOAD_SECRET. */
 function generateSecret(): string {
   const bytes = new Uint8Array(32)
@@ -44,7 +57,13 @@ function envLine(key: string, value: string): string {
   return `${key}=${value}`
 }
 
-export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
+export function SetupWizard({
+  envDatabase,
+  envExtras,
+}: {
+  envDatabase: EnvDatabase
+  envExtras: EnvExtras
+}) {
   const [step, setStep] = useState(0)
   const [furthestStep, setFurthestStep] = useState(0)
 
@@ -62,7 +81,10 @@ export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
   const [secretAccessKey, setSecretAccessKey] = useState('')
   const [s3Endpoint, setS3Endpoint] = useState('')
   const [s3Region, setS3Region] = useState('')
+  const [aiProvider, setAiProvider] = useState<AiProvider>('openrouter')
   const [aiKey, setAiKey] = useState('')
+  const [aiBaseUrl, setAiBaseUrl] = useState('')
+  const [aiName, setAiName] = useState('')
 
   // Which database credentials `testConnection` has already approved, so Next
   // does not re-test unnecessarily but does re-test after an edit.
@@ -71,6 +93,7 @@ export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
   const [stepError, setStepError] = useState<string | null>(null)
 
   const [progress, setProgress] = useState<Progress>('idle')
+  const [percent, setPercent] = useState(0)
   const [appId, setAppId] = useState<string | null>(null)
   const [secret] = useState(generateSecret)
   const [copied, setCopied] = useState(false)
@@ -84,7 +107,11 @@ export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
   // step stays in the rail, ticked, so it is clear it was handled rather than
   // silently dropped — but it is not one of the steps the wizard walks through.
   const useEnvDatabase = envDatabase.state === 'ready'
-  const steps = ALL_STEPS.filter((s) => !(useEnvDatabase && s.id === 'database'))
+  // Nothing left to ask on the extras step when both services are already set.
+  const extrasFromEnv = envExtras.media && envExtras.ai
+  const steps = ALL_STEPS.filter(
+    (s) => !(useEnvDatabase && s.id === 'database') && !(extrasFromEnv && s.id === 'extras'),
+  )
   const stepIndex = Math.min(step, steps.length - 1)
   const current = steps[stepIndex]
   const isLast = stepIndex === steps.length - 1
@@ -140,6 +167,10 @@ export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
         if (filled > 0 && filled < 3) {
           return 'Fill in the bucket name, access key ID and secret access key — or skip this step.'
         }
+        // An OpenAI-compatible endpoint is useless without knowing where it is.
+        if (aiProvider === 'compatible' && aiKey.trim() && !aiBaseUrl.trim()) {
+          return 'Enter the API base URL for your OpenAI-compatible provider.'
+        }
         return null
       }
       default:
@@ -167,6 +198,8 @@ export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
       setS3Endpoint('')
       setS3Region('')
       setAiKey('')
+      setAiBaseUrl('')
+      setAiName('')
     }
     goToIndex(Math.min(stepIndex + 1, steps.length - 1))
   }
@@ -174,9 +207,17 @@ export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
   async function handleCreate() {
     setStepError(null)
 
-    // The action runs all three stages server-side; advance the labels on a timer
-    // so the user sees which part is taking time rather than a frozen button.
+    // The action runs all three stages server-side without reporting back, so the
+    // bar is an estimate: it eases towards 92% and only completes when the work
+    // actually does. Creating the tables can take the better part of a minute and
+    // a frozen button reads as a hang.
     setProgress('migrating')
+    setPercent(0)
+    const started = Date.now()
+    const ticker = setInterval(() => {
+      const elapsed = (Date.now() - started) / 1000
+      setPercent(Math.min(92, 92 * (1 - Math.exp(-elapsed / 18))))
+    }, 200)
     const advance = [
       setTimeout(() => setProgress((p) => (p === 'migrating' ? 'creating-admin' : p)), 6000),
       setTimeout(() => setProgress((p) => (p === 'creating-admin' ? 'creating-app' : p)), 9000),
@@ -191,13 +232,16 @@ export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
       password,
     })
     advance.forEach(clearTimeout)
+    clearInterval(ticker)
 
     if (!result.ok) {
       setStepError(result.error)
       setProgress('idle')
+      setPercent(0)
       return
     }
 
+    setPercent(100)
     setAppId(result.data.appId)
     setProgress('done')
   }
@@ -218,7 +262,7 @@ export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
       envLine('CHAIBUILDER_APP_KEY', appId),
       envLine('NEXT_PUBLIC_SERVER_URL', siteUrl),
     ]
-    if (mediaConfigured) {
+    if (mediaConfigured && !envExtras.media) {
       lines.push(
         '',
         '# --- Media storage ---',
@@ -229,8 +273,18 @@ export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
         ...(s3Endpoint.trim() ? [envLine('S3_ENDPOINT', s3Endpoint.trim())] : []),
       )
     }
-    if (aiKey.trim()) {
-      lines.push('', '# --- AI ---', envLine('OPENROUTER_API_KEY', aiKey.trim()))
+    if (aiKey.trim() && !envExtras.ai) {
+      lines.push(
+        '',
+        '# --- AI ---',
+        ...(aiProvider === 'openrouter'
+          ? [envLine('OPENROUTER_API_KEY', aiKey.trim())]
+          : [
+              envLine('OPENAI_COMPATIBLE_API_KEY', aiKey.trim()),
+              envLine('OPENAI_COMPATIBLE_BASE_URL', aiBaseUrl.trim()),
+              ...(aiName.trim() ? [envLine('OPENAI_COMPATIBLE_NAME', aiName.trim())] : []),
+            ]),
+      )
     }
     const envBlock = lines.join('\n')
 
@@ -305,7 +359,7 @@ export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
             When it is done, sign in at <code>/admin</code> with the email and password you just
             chose.
           </p>
-          {!mediaConfigured && (
+          {!mediaConfigured && !envExtras.media && (
             <div className="note warn">
               You skipped media storage. Images you upload will disappear the next time the site is
               deployed. You can add those settings later and redeploy.
@@ -326,7 +380,10 @@ export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
 
       <ol className="stepper">
         {ALL_STEPS.map((entry) => {
-          if (useEnvDatabase && entry.id === 'database') {
+          if (
+            (useEnvDatabase && entry.id === 'database') ||
+            (extrasFromEnv && entry.id === 'extras')
+          ) {
             return (
               <li key={entry.id} className="done satisfied">
                 <span className="stepper-link">
@@ -417,23 +474,12 @@ export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
               </div>
             )}
             <p className="hint">
-              Your site stores its pages and content in a database. Turso offers a free one that
-              works well here.
+              Your site stores its pages and content in a libSQL/SQLite database. That can be a
+              hosted one such as <a href="https://turso.tech">Turso</a>, your own libSQL server, or
+              a local file. Create the database, then copy its address here — hosted providers give
+              you a <code>libsql://</code> URL, and a local file looks like{' '}
+              <code>file:./payload.db</code>.
             </p>
-            <ol className="steps">
-              <li>
-                Create a free account at <a href="https://turso.tech">turso.tech</a>.
-              </li>
-              <li>Create a database — any name is fine.</li>
-              <li>
-                Open the database and copy its <strong>URL</strong>. It starts with{' '}
-                <code>libsql://</code>.
-              </li>
-              <li>
-                In the same place, create a <strong>token</strong> and copy it. It is a long string
-                of letters and numbers.
-              </li>
-            </ol>
 
             <label htmlFor="dbUrl">Database URL</label>
             <input
@@ -445,7 +491,10 @@ export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
             />
 
             <label htmlFor="dbToken">Database token</label>
-            <div className="field-hint">Leave empty only if your database has no token.</div>
+            <div className="field-hint">
+              Optional — only hosted databases issue one. Leave empty for a local file or a server
+              without auth.
+            </div>
             <input
               id="dbToken"
               type="password"
@@ -496,22 +545,23 @@ export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
             </p>
 
             <h3>Media storage</h3>
-            <p className="hint">
-              Recommended. Without this, images you upload are lost every time the site is deployed,
-              because hosts like Vercel do not keep uploaded files. Cloudflare R2 has a free tier.
-            </p>
-            <ol className="steps">
-              <li>
-                In the <a href="https://dash.cloudflare.com">Cloudflare dashboard</a>, open{' '}
-                <strong>R2</strong> and create a bucket.
-              </li>
-              <li>
-                Create an <strong>API token</strong> for the bucket with read and write access.
-              </li>
-              <li>
-                Copy the access key, the secret key, and the S3 endpoint shown on the token screen.
-              </li>
-            </ol>
+            {envExtras.media ? (
+              <p className="hint">Already set on this deployment — nothing to fill in here.</p>
+            ) : (
+              <>
+                <p className="hint">
+                  Recommended. Without this, images you upload are lost every time the site is
+                  deployed, because hosts do not keep files written to disk. Works with any
+                  S3-compatible storage — AWS S3, Cloudflare R2, Backblaze B2, MinIO and others.
+                </p>
+                <ol className="steps">
+                  <li>Create a bucket with your storage provider.</li>
+                  <li>Create access keys for it with read and write permission.</li>
+                  <li>
+                    Copy the key, the secret, and — for anything other than AWS — the S3 endpoint
+                    URL.
+                  </li>
+                </ol>
 
             <label htmlFor="bucket">Bucket name</label>
             <input
@@ -560,19 +610,77 @@ export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
               placeholder="auto"
             />
 
+              </>
+            )}
+
             <h3>AI features</h3>
-            <p className="hint">
-              Add a key from <a href="https://openrouter.ai">OpenRouter</a> to write and edit
-              content with AI.
-            </p>
-            <label htmlFor="aiKey">OpenRouter API key</label>
-            <input
-              id="aiKey"
-              type="password"
-              value={aiKey}
-              onChange={(e) => setAiKey(e.target.value)}
-              placeholder="sk-or-..."
-            />
+            {envExtras.ai ? (
+              <p className="hint">Already set on this deployment — nothing to fill in here.</p>
+            ) : (
+              <>
+                <p className="hint">
+                  Add a provider key to write and edit content with AI.
+                </p>
+                <fieldset className="provider-choice">
+                  <legend>Provider</legend>
+                  <label>
+                    <input
+                      type="radio"
+                      name="aiProvider"
+                      checked={aiProvider === 'openrouter'}
+                      onChange={() => setAiProvider('openrouter')}
+                    />
+                    <span>
+                      <a href="https://openrouter.ai">OpenRouter</a>
+                    </span>
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="aiProvider"
+                      checked={aiProvider === 'compatible'}
+                      onChange={() => setAiProvider('compatible')}
+                    />
+                    <span>OpenAI-compatible endpoint — Vercel AI Gateway, OpenAI, or your own</span>
+                  </label>
+                </fieldset>
+
+                <label htmlFor="aiKey">API key</label>
+                <input
+                  id="aiKey"
+                  type="password"
+                  value={aiKey}
+                  onChange={(e) => setAiKey(e.target.value)}
+                  placeholder={aiProvider === 'openrouter' ? 'sk-or-...' : 'sk-...'}
+                />
+
+                {aiProvider === 'compatible' && (
+                  <>
+                    <label htmlFor="aiBaseUrl">API base URL</label>
+                    <div className="field-hint">
+                      For Vercel AI Gateway this is <code>https://ai-gateway.vercel.sh/v1</code>.
+                    </div>
+                    <input
+                      id="aiBaseUrl"
+                      type="text"
+                      value={aiBaseUrl}
+                      onChange={(e) => setAiBaseUrl(e.target.value)}
+                      placeholder="https://ai-gateway.vercel.sh/v1"
+                    />
+
+                    <label htmlFor="aiName">Provider name</label>
+                    <div className="field-hint">Optional. Shown in the editor.</div>
+                    <input
+                      id="aiName"
+                      type="text"
+                      value={aiName}
+                      onChange={(e) => setAiName(e.target.value)}
+                      placeholder="Vercel AI Gateway"
+                    />
+                  </>
+                )}
+              </>
+            )}
           </>
         )}
 
@@ -590,18 +698,32 @@ export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
                 <ReviewRow label="Database" value={dbUrl.trim()} onEdit={() => goTo('database')} />
               )}
               <ReviewRow label="Admin email" value={email.trim()} onEdit={() => goTo('admin')} />
-              <ReviewRow
-                label="Media storage"
-                value={mediaConfigured ? bucket.trim() : null}
-                onEdit={() => goTo('extras')}
-              />
-              <ReviewRow
-                label="AI"
-                value={aiKey.trim() ? 'OpenRouter key added' : null}
-                onEdit={() => goTo('extras')}
-              />
+              {envExtras.media ? (
+                <ReviewRow label="Media storage" value="Already set on this deployment" />
+              ) : (
+                <ReviewRow
+                  label="Media storage"
+                  value={mediaConfigured ? bucket.trim() : null}
+                  onEdit={() => goTo('extras')}
+                />
+              )}
+              {envExtras.ai ? (
+                <ReviewRow label="AI" value="Already set on this deployment" />
+              ) : (
+                <ReviewRow
+                  label="AI"
+                  value={
+                    aiKey.trim()
+                      ? aiProvider === 'openrouter'
+                        ? 'OpenRouter key added'
+                        : 'OpenAI-compatible key added'
+                      : null
+                  }
+                  onEdit={() => goTo('extras')}
+                />
+              )}
             </dl>
-            {!mediaConfigured && (
+            {!mediaConfigured && !envExtras.media && (
               <div className="note warn">
                 Without media storage, images you upload will not survive a redeploy. You can add it
                 now or later.
@@ -611,6 +733,12 @@ export function SetupWizard({ envDatabase }: { envDatabase: EnvDatabase }) {
         )}
 
         {stepError && <div className="note error">{stepError}</div>}
+
+        {running && (
+          <div className="progress-bar" role="progressbar" aria-valuenow={Math.round(percent)}>
+            <div className="progress-fill" style={{ width: `${percent}%` }} />
+          </div>
+        )}
 
         {running && (
           <ul className="progress">

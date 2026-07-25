@@ -534,3 +534,47 @@ code {
   flex: 0 0 auto;
   font-size: 13px;
 }
+
+/* Creating-the-site progress. The server reports no intermediate state, so this
+   is an estimate that eases toward 92% and completes when the work does. */
+.progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  margin: 18px 0 4px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.3s ease-out;
+}
+
+.provider-choice {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 14px 0 4px;
+}
+
+.provider-choice legend {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 6px;
+}
+
+.provider-choice label {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-weight: 400;
+  font-size: 14px;
+  margin: 6px 0;
+}
+
+.provider-choice input {
+  margin-top: 4px;
+  flex: 0 0 auto;
+}

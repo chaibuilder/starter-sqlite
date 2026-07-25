@@ -338,3 +338,153 @@ code {
 .spacer {
   height: 8px;
 }
+
+/* Step wizard */
+
+.stepper {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 4px;
+  padding: 0;
+  margin: 0 0 18px;
+}
+
+.stepper-link {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.stepper-link:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.stepper-num {
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.stepper li.current .stepper-link {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.stepper li.current .stepper-num {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+
+.stepper li.done .stepper-link {
+  color: var(--text);
+}
+
+.stepper li.done .stepper-num {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+}
+
+.stepper li.done .stepper-link:not(:disabled):hover {
+  background: var(--code-bg);
+}
+
+.optional-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.step-head h2:focus {
+  outline: none;
+}
+
+.step-head h2:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+.step-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.step-nav-end {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.review-list {
+  margin: 0;
+}
+
+.review-row {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.review-row:last-child {
+  border-bottom: none;
+}
+
+.review-row dt {
+  flex: 0 0 130px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.review-row dd {
+  margin: 0;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 14px;
+}
+
+.review-row dd > span {
+  overflow-wrap: anywhere;
+}
+
+.muted-value {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.review-row .link {
+  margin-left: auto;
+  font-size: 13px;
+  flex: 0 0 auto;
+}

@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { existsSync, rmSync } from 'node:fs'
 import path from 'node:path'
+import type { Migration } from 'payload'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { openDb } from '@/lib/setup/db'
 import { createAppRecord, findUserIdByEmail } from '@/lib/setup/create-app-record'
@@ -43,7 +44,9 @@ describe('setup wizard seeding', () => {
     })
 
     const { migrations } = await import('@/migrations')
-    await payload.db.migrate({ migrations })
+    // Same cast as the setup action: Payload types migrations as `(args: unknown)`
+    // while its own generator emits typed arguments.
+    await payload.db.migrate({ migrations: migrations as unknown as Migration[] })
 
     const client = openDb({ url: DB_URL })
     try {

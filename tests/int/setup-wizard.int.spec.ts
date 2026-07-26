@@ -24,13 +24,24 @@ function cleanup() {
 }
 
 describe('setup wizard seeding', () => {
+  let restorePush: (() => void) | undefined
+
   beforeAll(cleanup)
-  afterAll(cleanup)
+  afterAll(() => {
+    restorePush?.()
+    cleanup()
+  })
 
   it('migrates a fresh database, creates the admin, and seeds the app', async () => {
     // Setup runs against a production-shaped database: schema comes from
     // migrations, not from Drizzle push (which the shared test setup enables).
+    // Restored afterwards so it cannot change how later suites build their schema.
+    const previousPush = process.env.PAYLOAD_DB_PUSH
     process.env.PAYLOAD_DB_PUSH = 'false'
+    restorePush = () => {
+      if (previousPush === undefined) delete process.env.PAYLOAD_DB_PUSH
+      else process.env.PAYLOAD_DB_PUSH = previousPush
+    }
 
     const { getPayload } = await import('payload')
     const { buildPayloadConfig } = await import('@/payload.config')

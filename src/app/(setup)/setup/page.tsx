@@ -130,13 +130,13 @@ export default async function SetupPage() {
           </p>
         )}
         <div className="actions">
-          <a href={adminUrl('editor')}>
-            <button type="button">Open the editor</button>
+          {/* Styled links rather than buttons wrapped in anchors, which is
+              invalid HTML and confuses keyboard and assistive-tech users. */}
+          <a className="button-link" href={adminUrl('editor')}>
+            Open the editor
           </a>
-          <a href="/">
-            <button type="button" className="secondary">
-              View your site
-            </button>
+          <a className="button-link secondary" href="/">
+            View your site
           </a>
         </div>
       </div>

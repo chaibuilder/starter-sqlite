@@ -578,3 +578,22 @@ code {
   margin-top: 4px;
   flex: 0 0 auto;
 }
+
+/* Anchors that look like buttons. A <button> inside an <a> is invalid HTML and
+   breaks keyboard and assistive-tech behaviour. */
+.button-link {
+  display: inline-block;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  background: var(--primary);
+  color: var(--primary-text);
+  text-decoration: none;
+}
+
+.button-link.secondary {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}

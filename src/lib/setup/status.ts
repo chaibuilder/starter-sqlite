@@ -54,7 +54,10 @@ export async function getSetupStatus(): Promise<SetupStatus> {
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('apps', 'users', 'app_users', 'payload_migrations')",
     )
     const tableNames = new Set(tables.rows.map((row) => String(row.name)))
-    const schemaReady = tableNames.has('apps') && tableNames.has('users')
+    // `app_users` matters as much as the other two: without it an account can
+    // exist yet hold no admin membership, which locks the owner out.
+    const schemaReady =
+      tableNames.has('apps') && tableNames.has('users') && tableNames.has('app_users')
     checks.push({
       id: 'schema',
       label: 'Database tables',

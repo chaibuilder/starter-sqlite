@@ -53,8 +53,13 @@ function generateSecret(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
 }
 
+/**
+ * One `KEY=value` line. Line breaks are stripped: a pasted value containing one
+ * would split into a second, bogus variable when the block is pasted into a
+ * host's environment settings.
+ */
 function envLine(key: string, value: string): string {
-  return `${key}=${value}`
+  return `${key}=${value.replace(/[\r\n]+/g, ' ').trim()}`
 }
 
 export function SetupWizard({

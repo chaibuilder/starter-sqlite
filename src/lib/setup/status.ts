@@ -158,11 +158,20 @@ export async function getSetupStatus(): Promise<SetupStatus> {
   }
 }
 
-/** Turn libSQL connection failures into something a non-technical user can act on. */
-export function describeDbError(error: unknown): string {
+/**
+ * Turn libSQL connection failures into something a non-technical user can act on.
+ *
+ * `hadToken` matters: a hosted database answers an authenticated and an
+ * unauthenticated request with the same "HTTP status 401", so only the caller
+ * knows whether the user actually supplied a token. Without it, someone who left
+ * the field empty is told their token was rejected.
+ */
+export function describeDbError(error: unknown, opts: { hadToken?: boolean } = {}): string {
   const message = error instanceof Error ? error.message : String(error)
-  if (/unauthor|401|token/i.test(message)) {
-    return 'The database rejected the auth token. Check that you copied the whole token.'
+  if (/unauthor|authentication|\b401\b|\b403\b/i.test(message)) {
+    return opts.hadToken === false
+      ? 'This database needs an access token. Create one with your database provider and paste it above.'
+      : 'The database rejected the auth token. Check that you copied the whole token.'
   }
   if (/not found|404|ENOTFOUND|getaddrinfo|dns/i.test(message)) {
     return 'That database URL could not be reached. Check the address for typos.'

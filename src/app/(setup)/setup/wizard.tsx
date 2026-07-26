@@ -492,8 +492,8 @@ export function SetupWizard({
 
             <label htmlFor="dbToken">Database token</label>
             <div className="field-hint">
-              Optional — only hosted databases issue one. Leave empty for a local file or a server
-              without auth.
+              Hosted databases issue one and will refuse the connection without it. Leave empty only
+              for a local <code>file:</code> database or a server with no authentication.
             </div>
             <input
               id="dbToken"

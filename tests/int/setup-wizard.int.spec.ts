@@ -37,7 +37,7 @@ describe('setup wizard seeding', () => {
 
     const payload = await getPayload({
       config: buildPayloadConfig({
-        databaseUrl: DB_URL,
+        database: { url: DB_URL },
         secret: 'test-transient-secret',
       }),
       key: `setup-test:${DB_URL}`,

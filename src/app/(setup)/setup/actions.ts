@@ -87,7 +87,7 @@ export async function testConnection(credentials: {
     await client.execute('SELECT 1')
     return { ok: true, data: { message: 'Connected to your database.' } }
   } catch (error) {
-    return { ok: false, error: describeDbError(error) }
+    return { ok: false, error: describeDbError(error, { hadToken: Boolean(credentials.authToken) }) }
   } finally {
     client.close()
   }
@@ -112,6 +112,7 @@ export async function runSetup(input: SetupInput): Promise<ActionResult<{ appId:
   const resolved = resolveCredentials(input.database)
   if (!resolved.ok) return { ok: false, error: resolved.error }
   const credentials = resolved.credentials
+  const hadToken = Boolean(credentials.authToken)
 
   if (!appName) return { ok: false, error: 'Enter a name for your site.' }
   if (!email) return { ok: false, error: 'Enter an email address.' }
@@ -123,8 +124,7 @@ export async function runSetup(input: SetupInput): Promise<ActionResult<{ appId:
   try {
     payload = await getPayload({
       config: buildPayloadConfig({
-        databaseUrl: credentials.url,
-        databaseAuthToken: credentials.authToken,
+        database: credentials,
         secret: TRANSIENT_SECRET,
       }),
       // `getPayload` caches instances by key. The wizard connects to a database
@@ -133,7 +133,7 @@ export async function runSetup(input: SetupInput): Promise<ActionResult<{ appId:
       key: `setup:${credentials.url}`,
     })
   } catch (error) {
-    return { ok: false, error: describeDbError(error) }
+    return { ok: false, error: describeDbError(error, { hadToken }) }
   }
 
   try {
@@ -152,7 +152,7 @@ export async function runSetup(input: SetupInput): Promise<ActionResult<{ appId:
   } catch (error) {
     return {
       ok: false,
-      error: `Could not create the database tables: ${describeDbError(error)}`,
+      error: `Could not create the database tables: ${describeDbError(error, { hadToken })}`,
     }
   }
 
@@ -190,7 +190,7 @@ export async function runSetup(input: SetupInput): Promise<ActionResult<{ appId:
       userId = String(created.id)
     }
   } catch (error) {
-    return { ok: false, error: `Could not create the admin account: ${describeDbError(error)}` }
+    return { ok: false, error: `Could not create the admin account: ${describeDbError(error, { hadToken })}` }
   }
 
   const client = openDb(credentials)
@@ -205,7 +205,7 @@ export async function runSetup(input: SetupInput): Promise<ActionResult<{ appId:
     const { appId } = await createAppRecord(client, { appName, userId })
     return { ok: true, data: { appId } }
   } catch (error) {
-    return { ok: false, error: `Could not create your site: ${describeDbError(error)}` }
+    return { ok: false, error: `Could not create your site: ${describeDbError(error, { hadToken })}` }
   } finally {
     client.close()
   }

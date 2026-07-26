@@ -26,7 +26,11 @@ async function probeEnvDatabase(): Promise<EnvDatabase> {
     await client.execute('SELECT 1')
     return { state: 'ready', url: credentials.url }
   } catch (error) {
-    return { state: 'broken', url: credentials.url, error: describeDbError(error) }
+    return {
+      state: 'broken',
+      url: credentials.url,
+      error: describeDbError(error, { hadToken: Boolean(credentials.authToken) }),
+    }
   } finally {
     client.close()
   }

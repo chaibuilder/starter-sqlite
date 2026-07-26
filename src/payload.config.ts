@@ -30,8 +30,12 @@ const PLACEHOLDER_DATABASE_URL = 'file:/tmp/chai-placeholder.db'
 const PLACEHOLDER_SECRET = 'chai-unconfigured-placeholder-secret'
 
 export type PayloadConfigOverrides = {
-  databaseUrl?: string
-  databaseAuthToken?: string
+  /**
+   * Database connection as a single unit. A caller supplying a URL supplies its
+   * token too — merging an override URL with the environment's token would send
+   * one database's credentials to another.
+   */
+  database?: { url: string; authToken?: string }
   secret?: string
 }
 
@@ -44,14 +48,29 @@ export const mediaStorageActive = Boolean(
 )
 
 /**
+ * Resolve which database to connect to.
+ *
+ * All-or-nothing on purpose: an override supplies both the URL and its token, or
+ * neither. Falling back to `DATABASE_AUTH_TOKEN` for an overridden URL would send
+ * one database's credentials to another, which fails as a confusing auth error.
+ */
+export function resolveDatabase(
+  override?: { url: string; authToken?: string },
+): { url: string; authToken: string | undefined } {
+  if (override) return { url: override.url, authToken: override.authToken || undefined }
+  return {
+    url: process.env.DATABASE_URL || PLACEHOLDER_DATABASE_URL,
+    authToken: process.env.DATABASE_AUTH_TOKEN || undefined,
+  }
+}
+
+/**
  * Builds the Payload config. The overrides let the `/setup` wizard boot a
  * throwaway instance against credentials the user has just typed in, before
  * those credentials exist as environment variables on the deployment.
  */
 export function buildPayloadConfig(overrides: PayloadConfigOverrides = {}) {
-  const databaseUrl = overrides.databaseUrl || process.env.DATABASE_URL || PLACEHOLDER_DATABASE_URL
-  const databaseAuthToken =
-    overrides.databaseAuthToken ?? process.env.DATABASE_AUTH_TOKEN ?? undefined
+  const { url: databaseUrl, authToken: databaseAuthToken } = resolveDatabase(overrides.database)
   const secret = overrides.secret || process.env.PAYLOAD_SECRET || PLACEHOLDER_SECRET
 
   return buildConfig({

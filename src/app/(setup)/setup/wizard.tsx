@@ -26,7 +26,8 @@ const CLI_COMMAND = 'npx chaibuilder-app create'
 
 /**
  * Database credentials already present on this deployment, probed server-side.
- * The auth token deliberately never crosses to the client — when the state is
+ * `url` is redacted: a Postgres connection string carries its password inline,
+ * so the real one deliberately never crosses to the client — when the state is
  * `ready`, setup runs against the environment credentials on the server.
  */
 export type EnvDatabase =
@@ -74,10 +75,9 @@ export function SetupWizard({
   const [furthestStep, setFurthestStep] = useState(0)
 
   const [appName, setAppName] = useState('')
-  // A broken env URL is worth prefilling so the user can correct it rather than
-  // retype it; the token is not available here and stays blank.
-  const [dbUrl, setDbUrl] = useState(envDatabase.state === 'broken' ? envDatabase.url : '')
-  const [dbToken, setDbToken] = useState('')
+  // Not prefilled even when the deployment has a broken URL: the copy handed to
+  // the client has its password masked, so it would not be usable if submitted.
+  const [dbUrl, setDbUrl] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -107,7 +107,7 @@ export function SetupWizard({
   const headingRef = useRef<HTMLHeadingElement>(null)
   const running = progress !== 'idle' && progress !== 'done'
   const mediaConfigured = Boolean(bucket.trim() && accessKeyId.trim() && secretAccessKey.trim())
-  const dbKey = JSON.stringify([dbUrl.trim(), dbToken.trim()])
+  const dbKey = dbUrl.trim()
 
   // Working credentials on the deployment mean there is nothing to ask for. The
   // step stays in the rail, ticked, so it is clear it was handled rather than
@@ -154,7 +154,7 @@ export function SetupWizard({
         if (!dbUrl.trim()) return 'Enter your database URL.'
         if (verifiedDb === dbKey) return null
         setChecking(true)
-        const result = await testConnection({ url: dbUrl.trim(), authToken: dbToken.trim() })
+        const result = await testConnection({ url: dbUrl.trim() })
         setChecking(false)
         if (!result.ok) return result.error
         setVerifiedDb(dbKey)
@@ -232,7 +232,7 @@ export function SetupWizard({
     const result = await runSetup({
       database: useEnvDatabase
         ? { source: 'env' }
-        : { source: 'input', url: dbUrl.trim(), authToken: dbToken.trim() || undefined },
+        : { source: 'input', url: dbUrl.trim() },
       appName: appName.trim(),
       email: email.trim(),
       password,
@@ -262,7 +262,6 @@ export function SetupWizard({
         ? []
         : [
             envLine('DATABASE_URL', dbUrl.trim()),
-            ...(dbToken.trim() ? [envLine('DATABASE_AUTH_TOKEN', dbToken.trim())] : []),
           ]),
       envLine('PAYLOAD_SECRET', secret),
       envLine('CHAIBUILDER_APP_KEY', appId),
@@ -494,38 +493,30 @@ export function SetupWizard({
           <>
             {envDatabase.state === 'broken' && (
               <div className="note warn">
-                This deployment has database settings, but we could not use them: {envDatabase.error}{' '}
-                Enter them again below.
+                This deployment has database settings (<code>{envDatabase.url}</code>), but we could
+                not use them: {envDatabase.error} Enter them again below.
               </div>
             )}
             <p className="hint">
-              Your site stores its pages and content in a libSQL/SQLite database. That can be a
-              hosted one such as <a href="https://turso.tech">Turso</a>, your own libSQL server, or
-              a local file. Create the database, then copy its address here — hosted providers give
-              you a <code>libsql://</code> URL, and a local file looks like{' '}
-              <code>file:./payload.db</code>.
+              Your site stores its pages and content in a PostgreSQL database. That can be a hosted
+              one such as <a href="https://neon.com">Neon</a>, <a href="https://supabase.com">
+                Supabase
+              </a>{' '}
+              or Vercel Postgres, or your own server. Create the database, then copy its connection
+              string here — providers show it as a <code>postgres://</code> URL.
             </p>
 
-            <label htmlFor="dbUrl">Database URL</label>
-            <input
-              id="dbUrl"
-              type="text"
-              value={dbUrl}
-              onChange={(e) => setDbUrl(e.target.value)}
-              placeholder="libsql://your-database.turso.io"
-            />
-
-            <label htmlFor="dbToken">Database token</label>
+            <label htmlFor="dbUrl">Database connection string</label>
             <div className="field-hint">
-              Hosted databases issue one and will refuse the connection without it. Leave empty only
-              for a local <code>file:</code> database or a server with no authentication.
+              This contains the database password, so treat it like one. Hosted databases need TLS:
+              keep the <code>?sslmode=require</code> your provider puts on the end.
             </div>
             <input
-              id="dbToken"
+              id="dbUrl"
               type="password"
-              value={dbToken}
-              onChange={(e) => setDbToken(e.target.value)}
-              placeholder="eyJhbGciOi..."
+              value={dbUrl}
+              onChange={(e) => setDbUrl(e.target.value)}
+              placeholder="postgres://user:password@host:5432/database?sslmode=require"
             />
             <p className="field-hint">We check the connection before moving on.</p>
           </>

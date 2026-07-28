@@ -2,7 +2,6 @@ packages:
   - '.'
 
 allowBuilds:
-  better-sqlite3: true
   esbuild: true
   msw: true
   sharp: true
@@ -18,4 +17,5 @@ overrides:
   "@payloadcms/ui": "3.85.1"
   "@payloadcms/storage-s3": "3.85.1"
   "@payloadcms/plugin-cloud-storage": "3.85.1"
+  "@payloadcms/db-postgres": "3.85.1"
   "payload": "3.85.1"

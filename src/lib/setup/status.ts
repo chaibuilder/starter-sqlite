@@ -50,9 +50,11 @@ export async function getSetupStatus(): Promise<SetupStatus> {
       detail: 'Connected successfully.',
     })
 
-    const tables = await client.execute(
-      "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('apps', 'users', 'app_users', 'payload_migrations')",
-    )
+    const tables = await client.execute({
+      sql: `SELECT table_name AS name FROM information_schema.tables
+            WHERE table_schema = ANY (current_schemas(false)) AND table_name = ANY ($1)`,
+      args: [['apps', 'users', 'app_users', 'payload_migrations']],
+    })
     const tableNames = new Set(tables.rows.map((row) => String(row.name)))
     // `app_users` matters as much as the other two: without it an account can
     // exist yet hold no admin membership, which locks the owner out.
@@ -162,24 +164,47 @@ export async function getSetupStatus(): Promise<SetupStatus> {
 }
 
 /**
- * Turn libSQL connection failures into something a non-technical user can act on.
+ * Turn Postgres connection failures into something a non-technical user can act on.
  *
- * `hadToken` matters: a hosted database answers an authenticated and an
- * unauthenticated request with the same "HTTP status 401", so only the caller
- * knows whether the user actually supplied a token. Without it, someone who left
- * the field empty is told their token was rejected.
+ * Matching is on the server's `SQLSTATE` code where there is one, because those
+ * are stable across Postgres versions and providers while the message text is
+ * localised. Driver-level failures (DNS, refused, TLS) never reach the server,
+ * so those fall back to the Node error code.
  */
-export function describeDbError(error: unknown, opts: { hadToken?: boolean } = {}): string {
+export function describeDbError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error)
-  if (/unauthor|authentication|\b401\b|\b403\b/i.test(message)) {
-    return opts.hadToken === false
-      ? 'This database needs an access token. Create one with your database provider and paste it above.'
-      : 'The database rejected the auth token. Check that you copied the whole token.'
+  const code = typeof (error as { code?: unknown })?.code === 'string'
+    ? String((error as { code: string }).code)
+    : ''
+
+  // 28P01 invalid_password, 28000 invalid_authorization_specification
+  if (code === '28P01' || code === '28000' || /password authentication failed/i.test(message)) {
+    return 'The database rejected those credentials. Check the username and password in the connection string.'
   }
-  if (/not found|404|ENOTFOUND|getaddrinfo|dns/i.test(message)) {
-    return 'That database URL could not be reached. Check the address for typos.'
+  // 3D000 invalid_catalog_name
+  if (code === '3D000' || /database ".*" does not exist/i.test(message)) {
+    return 'That database does not exist on the server. Create it, or check the name at the end of the URL.'
   }
-  if (/econnrefused|timeout|ETIMEDOUT|network/i.test(message)) {
+  // Creating the PostGIS extension is attempted on connect but only logged if it
+  // fails, so a database without it surfaces here instead — as a missing type
+  // when the migration reaches Site Config's `location` point field.
+  if (/type "?geometry"? does not exist/i.test(message)) {
+    return 'This database is missing the PostGIS extension. Enable it (most providers offer it in their dashboard, or run `CREATE EXTENSION postgis;`) and try again.'
+  }
+  if (/no pg_hba\.conf entry/i.test(message) || /server does not support SSL/i.test(message)) {
+    return 'The server refused the connection settings. Most hosted databases need `?sslmode=require` on the end of the URL.'
+  }
+  if (/self.signed certificate|certificate/i.test(message)) {
+    return 'The database’s TLS certificate could not be verified. If it uses a private certificate authority, use `?sslmode=no-verify`.'
+  }
+  if (code === 'ENOTFOUND' || code === 'EAI_AGAIN' || /getaddrinfo/i.test(message)) {
+    return 'That database host could not be found. Check the address for typos.'
+  }
+  if (
+    code === 'ECONNREFUSED' ||
+    code === 'ETIMEDOUT' ||
+    /timeout|econnrefused|econnreset|network/i.test(message)
+  ) {
     return 'Could not reach the database. It may be paused, or the network blocked the request.'
   }
   return message

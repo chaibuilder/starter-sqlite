@@ -15,7 +15,7 @@ walks you through the rest:
 
 1. **Name your site.**
 2. **Connect a database.** Free to create; the wizard links to
-   [Turso](https://turso.tech) and explains what to copy.
+   [Neon](https://neon.com) and explains what to copy.
 3. **Create your login.** Pick the email address and password you will use to
    edit your site.
 4. **Media storage** (recommended) and **AI features** (optional).
@@ -47,8 +47,7 @@ settings screen is **Site configuration → Environment variables → Import fro
 
 | Variable | Required | What it is |
 | --- | --- | --- |
-| `DATABASE_URL` | Yes | Where content is stored. A local file, or a `libsql://` address for a hosted database. |
-| `DATABASE_AUTH_TOKEN` | For hosted databases | The token that grants access to it. |
+| `DATABASE_URL` | Yes | Where content is stored. A PostgreSQL connection string, e.g. `postgres://user:password@host:5432/db?sslmode=require`. |
 | `PAYLOAD_SECRET` | Yes | Signs login sessions. Generate with `openssl rand -hex 32`. |
 | `CHAIBUILDER_APP_KEY` | Yes | Identifies your site in the database. |
 | `NEXT_PUBLIC_SERVER_URL` | Recommended | Your site's public address, used in sitemaps and share links. |
@@ -79,7 +78,33 @@ pnpm dev
 Open `http://localhost:3000/setup` to create your account and site, then add the
 printed `CHAIBUILDER_APP_KEY` to your `.env` and restart.
 
-Requires Node.js 20.9+ and pnpm 9+.
+Requires Node.js 20.9+, pnpm 9+, and a PostgreSQL server. `docker compose up -d
+postgres` starts one that matches the default `DATABASE_URL` above.
+
+### Running the tests
+
+Integration tests need a Postgres server too. They create and wipe their own
+database, so they never touch the one in `DATABASE_URL`:
+
+```bash
+pnpm test:int
+```
+
+Set `TEST_DATABASE_URL` if your server is not at the default
+`postgres://postgres@127.0.0.1:5432/chai_test`.
+
+## PostgreSQL
+
+Any PostgreSQL 13+ server works — Neon, Supabase, Vercel Postgres, Amazon RDS, or
+your own. Two things are worth knowing:
+
+- **TLS.** Hosted providers require it and hand you a URL ending in
+  `?sslmode=require`. Keep that suffix. If your server uses a private
+  certificate authority, use `?sslmode=no-verify`.
+- **PostGIS.** Site Config stores a map location as a geographic point, which
+  Postgres only understands once the PostGIS extension exists. Providers offer it
+  as a toggle in their dashboard; on your own server, run `CREATE EXTENSION
+  postgis;` in the database once. `/setup` tells you if it is missing.
 
 ## Media storage
 

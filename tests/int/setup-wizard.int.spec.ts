@@ -1,35 +1,30 @@
 // @vitest-environment node
-import { existsSync, rmSync } from 'node:fs'
-import path from 'node:path'
 import type { Migration } from 'payload'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { openDb } from '@/lib/setup/db'
 import { createAppRecord, findUserIdByEmail } from '@/lib/setup/create-app-record'
 import { DEFAULT_APP_THEME, DEFAULT_BLOCKS, getDefaultHomeSeo } from '@/lib/setup/defaults'
+import { resetTestDatabase, testDatabaseUrl } from '../helpers/postgres'
 
 /**
  * Exercises the database work the `/setup` wizard performs, against a scratch
- * SQLite file. The wizard itself runs these through a server action; the value
- * here is proving the seeded rows match what the CLI produces, since the two
- * paths must create indistinguishable sites.
+ * Postgres database. The wizard itself runs these through a server action; the
+ * value here is proving the seeded rows match what the CLI produces, since the
+ * two paths must create indistinguishable sites.
+ *
+ * It gets a database of its own rather than sharing the one the other suites
+ * use, because it builds its schema from migrations instead of Drizzle push.
  */
-const DB_FILE = path.resolve(process.cwd(), '.test.setup-wizard.db')
-const DB_URL = `file:${DB_FILE}`
-
-function cleanup() {
-  for (const suffix of ['', '-wal', '-shm']) {
-    const file = `${DB_FILE}${suffix}`
-    if (existsSync(file)) rmSync(file)
-  }
-}
+const DB_URL = testDatabaseUrl('wizard')
 
 describe('setup wizard seeding', () => {
   let restorePush: (() => void) | undefined
 
-  beforeAll(cleanup)
+  beforeAll(async () => {
+    await resetTestDatabase(DB_URL)
+  })
   afterAll(() => {
     restorePush?.()
-    cleanup()
   })
 
   it('migrates a fresh database, creates the admin, and seeds the app', async () => {
@@ -61,9 +56,21 @@ describe('setup wizard seeding', () => {
 
     const client = openDb({ url: DB_URL })
     try {
-      const tables = await client.execute(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('apps', 'apps_online', 'app_users', 'app_pages', 'app_pages_online', 'users', 'payload_migrations')",
-      )
+      const tables = await client.execute({
+        sql: `SELECT table_name AS name FROM information_schema.tables
+              WHERE table_schema = ANY (current_schemas(false)) AND table_name = ANY ($1)`,
+        args: [
+          [
+            'apps',
+            'apps_online',
+            'app_users',
+            'app_pages',
+            'app_pages_online',
+            'users',
+            'payload_migrations',
+          ],
+        ],
+      })
       const names = new Set(tables.rows.map((row) => String(row.name)))
       for (const table of [
         'apps',
@@ -96,17 +103,18 @@ describe('setup wizard seeding', () => {
       expect(appId).toMatch(/^[0-9a-f-]{36}$/)
 
       const app = await client.execute({
-        sql: 'SELECT id, name, user, theme, fallbackLang FROM apps WHERE id = ?',
+        sql: 'SELECT id, name, "user", theme, "fallbackLang" FROM apps WHERE id = $1',
         args: [appId],
       })
       expect(app.rows).toHaveLength(1)
       expect(String(app.rows[0].name)).toBe('Test Site')
       expect(String(app.rows[0].user)).toBe(userId)
       expect(String(app.rows[0].fallbackLang)).toBe('en')
-      expect(JSON.parse(String(app.rows[0].theme))).toEqual(JSON.parse(JSON.stringify(DEFAULT_APP_THEME)))
+      // jsonb columns arrive already parsed from `pg`, unlike SQLite's text.
+      expect(app.rows[0].theme).toEqual(JSON.parse(JSON.stringify(DEFAULT_APP_THEME)))
 
       const online = await client.execute({
-        sql: 'SELECT id FROM apps_online WHERE id = ?',
+        sql: 'SELECT id FROM apps_online WHERE id = $1',
         args: [appId],
       })
       expect(online.rows).toHaveLength(1)
@@ -114,28 +122,26 @@ describe('setup wizard seeding', () => {
       // The app_users row is what grants admin rights; without it the account
       // exists but cannot enter the admin panel.
       const membership = await client.execute({
-        sql: 'SELECT role, permissions FROM app_users WHERE app = ? AND user = ?',
+        sql: 'SELECT role, permissions FROM app_users WHERE app = $1 AND "user" = $2',
         args: [appId, userId],
       })
       expect(membership.rows).toHaveLength(1)
       expect(String(membership.rows[0].role)).toBe('admin')
-      expect(JSON.parse(String(membership.rows[0].permissions))).toEqual(['*'])
+      expect(membership.rows[0].permissions).toEqual(['*'])
 
       const page = await client.execute({
-        sql: 'SELECT id, slug, name, pageType, seo, blocks FROM app_pages WHERE app = ?',
+        sql: 'SELECT id, slug, name, "pageType", seo, blocks FROM app_pages WHERE app = $1',
         args: [appId],
       })
       expect(page.rows).toHaveLength(1)
       expect(String(page.rows[0].slug)).toBe('/')
       expect(String(page.rows[0].name)).toBe('Home')
       expect(String(page.rows[0].pageType)).toBe('page')
-      expect(JSON.parse(String(page.rows[0].seo))).toEqual(getDefaultHomeSeo('Test Site'))
-      expect(JSON.parse(String(page.rows[0].blocks))).toEqual(
-        JSON.parse(JSON.stringify(DEFAULT_BLOCKS)),
-      )
+      expect(page.rows[0].seo).toEqual(getDefaultHomeSeo('Test Site'))
+      expect(page.rows[0].blocks).toEqual(JSON.parse(JSON.stringify(DEFAULT_BLOCKS)))
 
       const publishedPage = await client.execute({
-        sql: 'SELECT id FROM app_pages_online WHERE app = ?',
+        sql: 'SELECT id FROM app_pages_online WHERE app = $1',
         args: [appId],
       })
       expect(publishedPage.rows).toHaveLength(1)

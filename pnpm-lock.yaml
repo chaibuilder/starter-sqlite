@@ -10,6 +10,7 @@ overrides:
   '@payloadcms/ui': 3.85.1
   '@payloadcms/storage-s3': 3.85.1
   '@payloadcms/plugin-cloud-storage': 3.85.1
+  '@payloadcms/db-postgres': 3.85.1
   payload: 3.85.1
 
 importers:
@@ -3801,7 +3802,7 @@ packages:
       '@libsql/client': '>=0.14.0'
       '@next/third-parties': '>=15.3.0'
       '@openrouter/ai-sdk-provider': '>=2.0.0'
-      '@payloadcms/db-postgres': '>=3.85.0'
+      '@payloadcms/db-postgres': 3.85.1
       '@payloadcms/richtext-lexical': '>=3.85.0'
       '@payloadcms/ui': 3.85.1
       '@tailwindcss/postcss': ^4.0.0

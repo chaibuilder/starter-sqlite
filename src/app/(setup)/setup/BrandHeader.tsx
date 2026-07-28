@@ -1,5 +1,3 @@
-'use client'
-
 export function BrandHeader() {
   return (
     <div className="brand-header">

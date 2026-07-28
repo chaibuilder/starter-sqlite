@@ -7,37 +7,49 @@
  */
 
 :root {
-  --bg: #f6f7f9;
+  --bg: #f8fafc;
   --surface: #ffffff;
-  --border: #e4e4e7;
-  --text: #18181b;
-  --muted: #6b7280;
+  --surface-hover: #f1f5f9;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --muted: #64748b;
   --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-glow: rgba(37, 99, 235, 0.15);
   --primary-text: #ffffff;
-  --ok: #15803d;
-  --ok-bg: #f0fdf4;
-  --warn: #b45309;
+  --ok: #10b981;
+  --ok-bg: #ecfdf5;
+  --warn: #f59e0b;
   --warn-bg: #fffbeb;
-  --error: #b91c1c;
+  --error: #ef4444;
   --error-bg: #fef2f2;
-  --code-bg: #f4f4f5;
+  --code-bg: #0f172a;
+  --code-text: #f8fafc;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #09090b;
-    --surface: #111113;
+    --surface: #121215;
+    --surface-hover: #18181b;
     --border: #27272a;
-    --text: #fafafa;
+    --text: #f4f4f5;
     --muted: #a1a1aa;
     --primary: #3b82f6;
-    --ok: #4ade80;
-    --ok-bg: #052e16;
+    --primary-hover: #60a5fa;
+    --primary-glow: rgba(59, 130, 246, 0.2);
+    --ok: #34d399;
+    --ok-bg: #064e3b;
     --warn: #fbbf24;
-    --warn-bg: #2c1a02;
+    --warn-bg: #451a03;
     --error: #f87171;
-    --error-bg: #300c0c;
+    --error-bg: #450a0a;
     --code-bg: #18181b;
+    --code-text: #f4f4f5;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
   }
 }
 
@@ -52,12 +64,47 @@ body {
   font-family:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
 .wrap {
-  max-width: 680px;
+  max-width: 700px;
   margin: 0 auto;
   padding: 48px 20px 96px;
+}
+
+/* Brand Header Component */
+.brand-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.brand-title {
+  font-size: 20px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.brand-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: var(--primary-glow);
+  color: var(--primary);
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  border-radius: 999px;
 }
 
 .brand {
@@ -72,19 +119,21 @@ h1 {
   font-size: 30px;
   line-height: 1.25;
   margin: 0 0 12px;
-  font-weight: 650;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 h2 {
   font-size: 19px;
   margin: 0 0 6px;
-  font-weight: 620;
+  font-weight: 650;
+  letter-spacing: -0.01em;
 }
 
 h3 {
   font-size: 15px;
   margin: 20px 0 8px;
-  font-weight: 620;
+  font-weight: 650;
 }
 
 p {
@@ -95,14 +144,17 @@ p {
   color: var(--muted);
   font-size: 16px;
   margin-bottom: 28px;
+  line-height: 1.5;
 }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 18px;
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-md);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .card.dim {
@@ -111,9 +163,9 @@ p {
 
 .step-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
 }
 
 .step-num {
@@ -130,13 +182,14 @@ p {
   color: var(--muted);
   font-size: 14px;
   margin-bottom: 16px;
+  line-height: 1.5;
 }
 
 label {
   display: block;
   font-weight: 600;
   font-size: 14px;
-  margin: 14px 0 5px;
+  margin: 16px 0 6px;
 }
 
 .field-hint {
@@ -151,30 +204,42 @@ input[type='email'],
 input[type='password'],
 textarea {
   width: 100%;
-  padding: 10px 12px;
+  padding: 11px 14px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--bg);
   color: var(--text);
   font-size: 15px;
   font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 input:focus,
 textarea:focus {
-  outline: 2px solid var(--primary);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
 button {
   font: inherit;
   font-weight: 600;
-  border-radius: 8px;
-  padding: 10px 18px;
+  border-radius: 10px;
+  padding: 11px 20px;
   border: 1px solid transparent;
   cursor: pointer;
   background: var(--primary);
   color: var(--primary-text);
+  transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+button:not(.secondary):not(.link):hover:not(:disabled) {
+  background: var(--primary-hover);
+  box-shadow: 0 2px 8px var(--primary-glow);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 button:disabled {
@@ -188,28 +253,42 @@ button.secondary {
   border-color: var(--border);
 }
 
+button.secondary:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
 button.link {
   background: none;
   border: none;
   color: var(--primary);
   padding: 0;
+  box-shadow: none;
   text-decoration: underline;
+}
+
+button.link:hover:not(:disabled) {
+  background: none;
+  box-shadow: none;
+  color: var(--primary-hover);
+  transform: none;
 }
 
 .actions {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
   flex-wrap: wrap;
   margin-top: 20px;
 }
 
 .note {
-  border-radius: 8px;
-  padding: 12px 14px;
+  border-radius: 10px;
+  padding: 12px 16px;
   font-size: 14px;
-  margin: 14px 0;
+  margin: 16px 0;
   border: 1px solid transparent;
+  line-height: 1.5;
 }
 
 .note.ok {
@@ -245,17 +324,23 @@ ul.steps li {
 
 a {
   color: var(--primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
 }
 
 pre {
   background: var(--code-bg);
+  color: var(--code-text);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 14px;
+  border-radius: 10px;
+  padding: 16px;
   overflow-x: auto;
   font-size: 13px;
-  line-height: 1.55;
-  margin: 0 0 12px;
+  line-height: 1.6;
+  margin: 0 0 14px;
 }
 
 code {
@@ -270,8 +355,8 @@ code {
 
 .checklist li {
   display: flex;
-  gap: 12px;
-  padding: 12px 0;
+  gap: 14px;
+  padding: 14px 0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -281,8 +366,8 @@ code {
 
 .badge {
   flex: 0 0 auto;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 999px;
   display: grid;
   place-items: center;
@@ -317,17 +402,21 @@ code {
 .progress {
   list-style: none;
   padding: 0;
-  margin: 0 0 8px;
-  font-size: 15px;
+  margin: 12px 0 8px;
+  font-size: 14px;
 }
 
 .progress li {
   padding: 6px 0;
   color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .progress li.done {
   color: var(--ok);
+  font-weight: 500;
 }
 
 .progress li.active {
@@ -345,35 +434,36 @@ code {
   list-style: none;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 4px;
+  gap: 8px;
   padding: 0;
-  margin: 0 0 18px;
+  margin: 0 0 24px;
 }
 
 .stepper-link {
   display: flex;
   align-items: center;
-  gap: 7px;
-  background: none;
-  border: none;
-  padding: 4px 8px;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 6px 14px;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
   color: var(--muted);
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .stepper-link:disabled {
   cursor: default;
-  opacity: 1;
+  opacity: 0.9;
 }
 
 .stepper-num {
   display: grid;
   place-items: center;
-  width: 21px;
-  height: 21px;
+  width: 20px;
+  height: 20px;
   border-radius: 999px;
   border: 1px solid var(--border);
   font-size: 11px;
@@ -383,6 +473,9 @@ code {
 
 .stepper li.current .stepper-link {
   color: var(--text);
+  border-color: var(--primary);
+  background: var(--surface);
+  box-shadow: 0 0 0 2px var(--primary-glow);
   font-weight: 650;
 }
 
@@ -394,22 +487,26 @@ code {
 
 .stepper li.done .stepper-link {
   color: var(--text);
+  background: var(--surface);
 }
 
 .stepper li.done .stepper-num {
   background: var(--ok);
   border-color: var(--ok);
-  color: #fff;
+  color: #ffffff;
 }
 
 .stepper li.done .stepper-link:not(:disabled):hover {
-  background: var(--code-bg);
+  background: var(--surface-hover);
+  border-color: var(--border);
 }
 
 /* A step the deployment already satisfies: shown ticked, never navigated to. */
 .stepper li.satisfied .stepper-link {
   cursor: default;
   color: var(--muted);
+  background: transparent;
+  border-color: transparent;
 }
 
 .optional-tag {
@@ -435,15 +532,15 @@ code {
 .step-nav {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 24px;
-  padding-top: 18px;
+  gap: 12px;
+  margin-top: 28px;
+  padding-top: 20px;
   border-top: 1px solid var(--border);
 }
 
 .step-nav-end {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   margin-left: auto;
   flex-wrap: wrap;
 }
@@ -456,7 +553,7 @@ code {
   display: flex;
   gap: 12px;
   align-items: baseline;
-  padding: 11px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -465,7 +562,7 @@ code {
 }
 
 .review-row dt {
-  flex: 0 0 130px;
+  flex: 0 0 140px;
   font-weight: 600;
   font-size: 14px;
 }
@@ -497,9 +594,9 @@ code {
 
 .cli-aside {
   margin-top: 26px;
-  padding: 16px;
+  padding: 18px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--bg);
   font-size: 14px;
 }
@@ -507,6 +604,7 @@ code {
 .cli-aside p {
   color: var(--muted);
   margin: 6px 0 12px;
+  line-height: 1.5;
 }
 
 .cli-aside p:last-child {
@@ -518,9 +616,10 @@ code {
   align-items: center;
   gap: 12px;
   background: var(--code-bg);
+  color: var(--code-text);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 9px 12px;
+  border-radius: 10px;
+  padding: 10px 14px;
   margin-bottom: 12px;
 }
 
@@ -538,25 +637,26 @@ code {
 /* Creating-the-site progress. The server reports no intermediate state, so this
    is an estimate that eases toward 92% and completes when the work does. */
 .progress-bar {
-  height: 6px;
+  height: 8px;
   border-radius: 999px;
-  background: var(--code-bg);
+  background: var(--bg);
   border: 1px solid var(--border);
   overflow: hidden;
-  margin: 18px 0 4px;
+  margin: 20px 0 8px;
 }
 
 .progress-fill {
   height: 100%;
   background: var(--primary);
+  border-radius: 999px;
   transition: width 0.3s ease-out;
 }
 
 .provider-choice {
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px 14px;
-  margin: 14px 0 4px;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 16px 0 6px;
 }
 
 .provider-choice legend {
@@ -568,10 +668,11 @@ code {
 .provider-choice label {
   display: flex;
   align-items: flex-start;
-  gap: 9px;
+  gap: 10px;
   font-weight: 400;
   font-size: 14px;
-  margin: 6px 0;
+  margin: 8px 0;
+  cursor: pointer;
 }
 
 .provider-choice input {
@@ -584,16 +685,27 @@ code {
 .button-link {
   display: inline-block;
   font-weight: 600;
-  border-radius: 8px;
-  padding: 10px 18px;
+  border-radius: 10px;
+  padding: 11px 20px;
   border: 1px solid transparent;
   background: var(--primary);
   color: var(--primary-text);
   text-decoration: none;
+  transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.button-link:hover {
+  text-decoration: none;
+  box-shadow: 0 2px 8px var(--primary-glow);
 }
 
 .button-link.secondary {
   background: transparent;
   color: var(--text);
   border-color: var(--border);
+}
+
+.button-link.secondary:hover {
+  background: var(--surface-hover);
+  box-shadow: none;
 }

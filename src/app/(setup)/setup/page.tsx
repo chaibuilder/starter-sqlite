@@ -3,6 +3,7 @@ import { isConfigured } from '@/lib/is-configured'
 import { envDbCredentials, openDb } from '@/lib/setup/db'
 import { describeDbError, getSetupStatus } from '@/lib/setup/status'
 import { SetupWizard, type EnvDatabase, type EnvExtras } from './wizard'
+import { BrandHeader } from './BrandHeader'
 
 // Setup reflects live environment and database state, so it must never be
 // cached or prerendered.
@@ -63,7 +64,7 @@ export default async function SetupPage() {
 
   return (
     <div className="wrap">
-      <div className="brand">ChaiBuilder</div>
+      <BrandHeader />
       <h1>{problems.length === 0 ? 'Your site is set up' : 'Your site needs attention'}</h1>
       <p className="lede">
         {problems.length === 0

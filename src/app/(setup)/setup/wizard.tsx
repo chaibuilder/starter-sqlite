@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { runSetup, testConnection } from './actions'
+import { BrandHeader } from './BrandHeader'
 
 type Progress = 'idle' | 'migrating' | 'creating-admin' | 'creating-app' | 'done'
 
@@ -295,7 +296,7 @@ export function SetupWizard({
 
     return (
       <div className="wrap">
-        <div className="brand">ChaiBuilder</div>
+        <BrandHeader />
         <h1>Your site is ready — one last step</h1>
         <p className="lede">
           We created your database tables, your admin account, and your site. To finish, your
@@ -314,17 +315,36 @@ export function SetupWizard({
           <pre>
             <code>{envBlock}</code>
           </pre>
-          <button
-            type="button"
-            onClick={() => {
-              void navigator.clipboard.writeText(envBlock).then(() => {
-                setCopied(true)
-                setTimeout(() => setCopied(false), 2500)
-              })
-            }}
-          >
-            {copied ? 'Copied' : 'Copy all settings'}
-          </button>
+          <div className="actions" style={{ marginTop: '16px' }}>
+            <button
+              type="button"
+              onClick={() => {
+                void navigator.clipboard.writeText(envBlock).then(() => {
+                  setCopied(true)
+                  setTimeout(() => setCopied(false), 2500)
+                })
+              }}
+            >
+              {copied ? '✓ Copied to clipboard' : 'Copy .env variables'}
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => {
+                const blob = new Blob([envBlock], { type: 'text/plain;charset=utf-8' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = '.env'
+                document.body.appendChild(a)
+                a.click()
+                document.body.removeChild(a)
+                URL.revokeObjectURL(url)
+              }}
+            >
+              Download .env file
+            </button>
+          </div>
         </div>
 
         <div className="card">
@@ -377,10 +397,10 @@ export function SetupWizard({
 
   return (
     <div className="wrap">
-      <div className="brand">ChaiBuilder</div>
-      <h1>Let&rsquo;s set up your site</h1>
+      <BrandHeader />
+      <h1>Set up your ChaiBuilder site</h1>
       <p className="lede">
-        This takes about five minutes. Nothing you type here is saved on this server.
+        Configure your site name, database connection, and admin credentials in a few simple steps.
       </p>
 
       <ol className="stepper">

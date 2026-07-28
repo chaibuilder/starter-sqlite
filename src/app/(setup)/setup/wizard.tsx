@@ -39,7 +39,8 @@ const CLI_COMMAND = 'npx chaibuilder-app create'
 
 /**
  * Database credentials already present on this deployment, probed server-side.
- * The auth token deliberately never crosses to the client — when the state is
+ * `url` is redacted: a Postgres connection string carries its password inline,
+ * so the real one deliberately never crosses to the client — when the state is
  * `ready`, setup runs against the environment credentials on the server.
  */
 export type EnvDatabase =
@@ -74,10 +75,9 @@ export function SetupWizard({
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  // A broken env URL is worth prefilling so the user can correct it rather than
-  // retype it; the token is not available here and stays blank.
-  const [dbUrl, setDbUrl] = useState(envDatabase.state === 'broken' ? envDatabase.url : '')
-  const [dbToken, setDbToken] = useState('')
+  // Not prefilled even when the deployment has a broken URL: the copy handed to
+  // the client has its password masked, so it would not be usable if submitted.
+  const [dbUrl, setDbUrl] = useState('')
   const [extras, setExtras] = useState<Extras>(EMPTY_EXTRAS)
 
   // Which database credentials `testConnection` has already approved, so Next
@@ -93,7 +93,7 @@ export function SetupWizard({
 
   const headingRef = useRef<HTMLHeadingElement>(null)
   const running = progress !== 'idle' && progress !== 'done'
-  const dbKey = JSON.stringify([dbUrl.trim(), dbToken.trim()])
+  const dbKey = dbUrl.trim()
 
   // Working credentials on the deployment mean there is nothing to ask for. The
   // step stays in the rail, ticked, so it is clear it was handled rather than
@@ -137,10 +137,10 @@ export function SetupWizard({
         if (password.length < 4) return 'Password must be at least 4 characters.'
         return null
       case 'database': {
-        if (!dbUrl.trim()) return 'Enter your database URL.'
+        if (!dbUrl.trim()) return 'Enter your database connection string.'
         if (verifiedDb === dbKey) return null
         setChecking(true)
-        const result = await testConnection({ url: dbUrl.trim(), authToken: dbToken.trim() })
+        const result = await testConnection({ url: dbUrl.trim() })
         setChecking(false)
         if (!result.ok) return result.error
         setVerifiedDb(dbKey)
@@ -191,7 +191,7 @@ export function SetupWizard({
     const result = await runSetup({
       database: useEnvDatabase
         ? { source: 'env' }
-        : { source: 'input', url: dbUrl.trim(), authToken: dbToken.trim() || undefined },
+        : { source: 'input', url: dbUrl.trim() },
       appName: appName.trim(),
       email: email.trim(),
       password,
@@ -218,7 +218,6 @@ export function SetupWizard({
         secret={secret}
         useEnvDatabase={useEnvDatabase}
         dbUrl={dbUrl.trim()}
-        dbToken={dbToken.trim()}
         extras={extras}
         envMedia={envMedia}
         envAi={envAi}
@@ -349,31 +348,22 @@ export function SetupWizard({
                 </div>
               )}
               <p className="hint">
-                Your pages and content live in a hosted libSQL database — a free one from{' '}
-                <NewTabLink href="https://turso.tech">Turso</NewTabLink> works well. Create it, then
-                copy its{' '}
-                <code>libsql://</code> address here.
+                Your pages and content live in a PostgreSQL database — a free one from{' '}
+                <NewTabLink href="https://neon.com">Neon</NewTabLink> works well. Create it, then
+                copy its <code>postgres://</code> connection string here.
               </p>
 
-              <label htmlFor="dbUrl">Database URL</label>
-              <input
-                id="dbUrl"
-                type="text"
-                value={dbUrl}
-                onChange={(e) => setDbUrl(e.target.value)}
-                placeholder="libsql://your-database.turso.io"
-              />
-
-              <label htmlFor="dbToken">Database token</label>
+              <label htmlFor="dbUrl">Database connection string</label>
               <div className="field-hint">
-                Your provider issues one alongside the URL and will refuse the connection without it.
+                This contains the database password, so treat it like one. Hosted databases need TLS:
+                keep the <code>?sslmode=require</code> your provider puts on the end.
               </div>
               <input
-                id="dbToken"
+                id="dbUrl"
                 type="password"
-                value={dbToken}
-                onChange={(e) => setDbToken(e.target.value)}
-                placeholder="eyJhbGciOi..."
+                value={dbUrl}
+                onChange={(e) => setDbUrl(e.target.value)}
+                placeholder="postgres://user:password@host:5432/database?sslmode=require"
               />
               <p className="field-hint">We check the connection before moving on.</p>
             </>

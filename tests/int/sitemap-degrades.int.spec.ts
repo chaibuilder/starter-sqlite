@@ -3,10 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // `/sitemap.xml` is prerendered, so anything this route throws fails the whole
 // build. The database can be unreachable while the environment looks configured
-// — tables not yet migrated, a sleeping Turso instance, rotated credentials —
+// — tables not yet migrated, a sleeping serverless instance, rotated credentials —
 // and none of those should cost the user a deploy.
 const { getChaiBuilder } = vi.hoisted(() => {
-  process.env.DATABASE_URL = 'file:./payload.db'
+  process.env.DATABASE_URL = 'postgres://chai:chai@127.0.0.1:5432/chai-unreachable'
   return { getChaiBuilder: vi.fn() }
 })
 

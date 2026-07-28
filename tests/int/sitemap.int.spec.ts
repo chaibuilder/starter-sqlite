@@ -2,7 +2,7 @@
 import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest'
 
 vi.hoisted(() => {
-  process.env.DATABASE_URL = 'file:./payload.db'
+  process.env.DATABASE_URL = 'postgres://chai:chai@127.0.0.1:5432/chai-sitemap-placeholder'
 })
 
 import { toAbsoluteUrl, mergeSitemapEntries } from '@/app/sitemap'

@@ -1,6 +1,6 @@
 import { adminUrl } from '@/utilities/adminRoute'
 import { isConfigured } from '@/lib/is-configured'
-import { envDbCredentials, openDb } from '../lib/db'
+import { envDbCredentials, openDb, redactDbUrl } from '../lib/db'
 import { detectHost, hostEnvUrl } from '../lib/host'
 import { describeDbError, getSetupStatus } from '../lib/status'
 import { SetupWizard, type EnvDatabase } from './wizard'
@@ -18,8 +18,9 @@ const DOCS_URL = 'https://www.chaibuilder.com/docs'
  * Whether this deployment already carries usable database credentials, e.g. the
  * user filled them in while deploying. When they work the wizard skips asking.
  *
- * Only the URL is returned: `DATABASE_AUTH_TOKEN` must never reach the browser,
- * so setup runs against the environment credentials server-side instead.
+ * Only a redacted URL is returned: a Postgres connection string contains the
+ * password, so the real one must never reach the browser. Setup runs against the
+ * environment credentials server-side instead.
  */
 async function probeEnvDatabase(): Promise<EnvDatabase> {
   const credentials = envDbCredentials()
@@ -28,12 +29,12 @@ async function probeEnvDatabase(): Promise<EnvDatabase> {
   const client = openDb(credentials)
   try {
     await client.execute('SELECT 1')
-    return { state: 'ready', url: credentials.url }
+    return { state: 'ready', url: redactDbUrl(credentials.url) }
   } catch (error) {
     return {
       state: 'broken',
-      url: credentials.url,
-      error: describeDbError(error, { hadToken: Boolean(credentials.authToken) }),
+      url: redactDbUrl(credentials.url),
+      error: describeDbError(error),
     }
   } finally {
     client.close()

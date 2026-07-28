@@ -32,7 +32,6 @@ export function SuccessScreen({
   secret,
   useEnvDatabase,
   dbUrl,
-  dbToken,
   extras,
   envMedia,
   envAi,
@@ -43,7 +42,6 @@ export function SuccessScreen({
   secret: string
   useEnvDatabase: boolean
   dbUrl: string
-  dbToken: string
   extras: Extras
   envMedia: boolean
   envAi: boolean
@@ -58,13 +56,8 @@ export function SuccessScreen({
 
   const block = envBlock([
     // Already set on this deployment when the credentials came from the
-    // environment; the auth token is not available here in any case.
-    ...(useEnvDatabase
-      ? []
-      : [
-          envLine('DATABASE_URL', dbUrl),
-          ...(dbToken ? [envLine('DATABASE_AUTH_TOKEN', dbToken)] : []),
-        ]),
+    // environment, where the connection string stays server-side.
+    ...(useEnvDatabase ? [] : [envLine('DATABASE_URL', dbUrl)]),
     envLine('PAYLOAD_SECRET', secret),
     envLine('CHAIBUILDER_APP_KEY', appId),
     envLine('NEXT_PUBLIC_SERVER_URL', siteUrl),

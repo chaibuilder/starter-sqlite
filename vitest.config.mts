@@ -16,8 +16,8 @@ export default defineConfig({
     globalSetup: ['./vitest.globalSetup.ts'],
     setupFiles: ['./vitest.setup.ts'],
     include: ['tests/int/**/*.int.spec.ts'],
-    // DB-backed suites share one local SQLite file; run serially so schema push
-    // and fixed-slug fixtures don't race across worker processes.
+    // DB-backed suites share one local Postgres database; run serially so schema
+    // push and fixed-slug fixtures don't race across worker processes.
     fileParallelism: false,
     server: {
       // chaipro ships ESM with extensionless lodash-es imports that Node's

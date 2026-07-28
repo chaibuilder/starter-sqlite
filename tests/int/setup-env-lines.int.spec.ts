@@ -13,7 +13,7 @@ describe('envLine', () => {
   })
 
   it('collapses line breaks in a pasted value', () => {
-    expect(envLine('DATABASE_AUTH_TOKEN', 'ey.Jh\r\nbGci')).toBe('DATABASE_AUTH_TOKEN=ey.Jh bGci')
+    expect(envLine('DATABASE_URL', 'postgres://u:p@host\r\n/db')).toBe('DATABASE_URL=postgres://u:p@host /db')
   })
 
   it('trims surrounding whitespace', () => {

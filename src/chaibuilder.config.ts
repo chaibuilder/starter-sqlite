@@ -5,7 +5,7 @@
  */
 import { Blog } from '@/collections/Blog'
 import config from '@payload-config'
-import { createLibsqlDB } from 'chaipro/db/libsql'
+import { createNodePgDB } from 'chaipro/db/node-pg'
 import {
     asChaiBuilderGlobalProvider,
     buildChaiBuilderConfig,
@@ -21,14 +21,13 @@ import type { ResolvedChaiBuilderServerConfig } from 'chaipro/types'
 
 const chaiConfig: Readonly<ResolvedChaiBuilderServerConfig> = buildChaiBuilderConfig({
   payloadConfig: config,
-  db: createLibsqlDB({
+  db: createNodePgDB({
     // Falls back to a placeholder so a deployment with no environment variables
     // still boots and can serve `/setup`. See `src/payload.config.ts`.
-    url: process.env.DATABASE_URL || 'file:/tmp/chai-placeholder.db',
-    authToken: process.env.DATABASE_AUTH_TOKEN || undefined,
+    url: process.env.DATABASE_URL || 'postgres://chai:chai@127.0.0.1:5432/chai-placeholder',
   }),
   // Registering a plugin enables its feature; options carry the feature's config.
-  // Plugin tables are NOT gated here — `chaiBuilderSchemaHookSqlite` injects the
+  // Plugin tables are NOT gated here — `chaiBuilderSchemaHook` injects the
   // full ChaiBuilder schema, so every plugin's tables exist (empty when
   // unregistered) and enabling a plugin later needs no migration.
   // Not registered: aiCreditsPlugin (credit billing), multilingualPlugin,

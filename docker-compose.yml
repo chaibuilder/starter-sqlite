@@ -11,33 +11,28 @@ services:
     working_dir: /home/node/app/
     command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm dev"
     depends_on:
-      - mongo
-      # - postgres
+      - postgres
     env_file:
       - .env
 
-  # Ensure your DATABASE_URL uses 'mongo' as the hostname ie. mongodb://mongo/my-db-name
-  mongo:
-    image: mongo:latest
-    ports:
-      - '27017:27017'
-    command:
-      - --storageEngine=wiredTiger
+  # From another container, DATABASE_URL uses 'postgres' as the hostname, ie.
+  # postgres://postgres:postgres@postgres:5432/chaibuilder. From your own machine
+  # it is 'localhost', which is what .env.example uses.
+  #
+  # The postgis image rather than plain postgres: Site Config stores a map
+  # location as a geographic point, which needs the PostGIS extension.
+  postgres:
+    restart: always
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chaibuilder
     volumes:
-      - data:/data/db
-    logging:
-      driver: none
-
-  # Uncomment the following to use postgres
-  # postgres:
-  #   restart: always
-  #   image: postgres:latest
-  #   volumes:
-  #     - pgdata:/var/lib/postgresql/data
-  #   ports:
-  #     - "5432:5432"
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
 
 volumes:
-  data:
-  # pgdata:
+  pgdata:
   node_modules:

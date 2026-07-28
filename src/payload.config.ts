@@ -1,8 +1,8 @@
-import { sqliteAdapter } from '@payloadcms/db-sqlite'
+import { postgresAdapter } from '@payloadcms/db-postgres'
 import { seoPlugin } from '@payloadcms/plugin-seo'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { s3Storage } from '@payloadcms/storage-s3'
-import { chaiBuilderPlugin, chaiBuilderSchemaHookSqlite } from 'chaipro/payload'
+import { chaiBuilderPlugin, chaiBuilderSchemaHook } from 'chaipro/payload'
 import path from 'path'
 import { buildConfig } from 'payload'
 import sharp from 'sharp'
@@ -24,18 +24,16 @@ const dirname = path.dirname(filename)
  * Placeholder connection used when DATABASE_URL is unset. A fresh deployment
  * (e.g. "Deploy to Vercel" with no environment variables) must still boot far
  * enough to serve `/setup`; every other route is redirected there by
- * `src/proxy.ts`, so this database is never actually read from or written to.
+ * `src/proxy.ts`, so this connection is never actually opened. It points at
+ * localhost on purpose: if something does try to use it the connection is
+ * refused immediately rather than hanging on a DNS lookup.
  */
-const PLACEHOLDER_DATABASE_URL = 'file:/tmp/chai-placeholder.db'
+const PLACEHOLDER_DATABASE_URL = 'postgres://chai:chai@127.0.0.1:5432/chai-placeholder'
 const PLACEHOLDER_SECRET = 'chai-unconfigured-placeholder-secret'
 
 export type PayloadConfigOverrides = {
-  /**
-   * Database connection as a single unit. A caller supplying a URL supplies its
-   * token too — merging an override URL with the environment's token would send
-   * one database's credentials to another.
-   */
-  database?: { url: string; authToken?: string }
+  /** Database connection string to use instead of `DATABASE_URL`. */
+  database?: { url: string }
   secret?: string
 }
 
@@ -50,18 +48,12 @@ export const mediaStorageActive = Boolean(
 /**
  * Resolve which database to connect to.
  *
- * All-or-nothing on purpose: an override supplies both the URL and its token, or
- * neither. Falling back to `DATABASE_AUTH_TOKEN` for an overridden URL would send
- * one database's credentials to another, which fails as a confusing auth error.
+ * A Postgres connection string carries its own credentials, so an override
+ * replaces the environment's connection outright — there is nothing to merge.
  */
-export function resolveDatabase(
-  override?: { url: string; authToken?: string },
-): { url: string; authToken: string | undefined } {
-  if (override) return { url: override.url, authToken: override.authToken || undefined }
-  return {
-    url: process.env.DATABASE_URL || PLACEHOLDER_DATABASE_URL,
-    authToken: process.env.DATABASE_AUTH_TOKEN || undefined,
-  }
+export function resolveDatabase(override?: { url: string }): { url: string } {
+  if (override) return { url: override.url }
+  return { url: process.env.DATABASE_URL || PLACEHOLDER_DATABASE_URL }
 }
 
 /**
@@ -70,7 +62,7 @@ export function resolveDatabase(
  * those credentials exist as environment variables on the deployment.
  */
 export function buildPayloadConfig(overrides: PayloadConfigOverrides = {}) {
-  const { url: databaseUrl, authToken: databaseAuthToken } = resolveDatabase(overrides.database)
+  const { url: databaseUrl } = resolveDatabase(overrides.database)
   const secret = overrides.secret || process.env.PAYLOAD_SECRET || PLACEHOLDER_SECRET
 
   return buildConfig({
@@ -130,13 +122,19 @@ export function buildPayloadConfig(overrides: PayloadConfigOverrides = {}) {
     typescript: {
       outputFile: path.resolve(dirname, 'payload-types.ts'),
     },
-    db: sqliteAdapter({
-      client: {
-        url: databaseUrl,
-        authToken: databaseAuthToken,
+    db: postgresAdapter({
+      pool: {
+        connectionString: databaseUrl,
       },
       push: process.env.PAYLOAD_DB_PUSH === 'true',
-      beforeSchemaInit: [chaiBuilderSchemaHookSqlite],
+      beforeSchemaInit: [chaiBuilderSchemaHook],
+      // The `location` point field on Site Config becomes a `geometry(Point)`
+      // column on Postgres, which the server only understands once PostGIS is
+      // installed. Payload issues `CREATE EXTENSION IF NOT EXISTS` on connect;
+      // it is named here so the requirement is visible rather than inferred from
+      // a field three files away. Hosted providers ship PostGIS but leave it off
+      // by default — `describeDbError` explains the failure if it is missing.
+      extensions: ['postgis'],
       idType: 'uuid',
       transactionOptions: {},
       migrationDir: path.resolve(dirname, 'migrations'),

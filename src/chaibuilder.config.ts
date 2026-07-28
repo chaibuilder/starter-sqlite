@@ -22,7 +22,9 @@ import type { ResolvedChaiBuilderServerConfig } from 'chaipro/types'
 const chaiConfig: Readonly<ResolvedChaiBuilderServerConfig> = buildChaiBuilderConfig({
   payloadConfig: config,
   db: createLibsqlDB({
-    url: process.env.DATABASE_URL!,
+    // Falls back to a placeholder so a deployment with no environment variables
+    // still boots and can serve `/setup`. See `src/payload.config.ts`.
+    url: process.env.DATABASE_URL || 'file:/tmp/chai-placeholder.db',
     authToken: process.env.DATABASE_AUTH_TOKEN || undefined,
   }),
   // Registering a plugin enables its feature; options carry the feature's config.

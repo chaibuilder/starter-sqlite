@@ -57,6 +57,11 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  height: 100%;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -65,12 +70,56 @@ body {
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  /* The page itself never scrolls. Anything that does not fit scrolls inside
+     the card body or `.scroll-area`, so the primary action stays in view. */
+  overflow: hidden;
 }
 
 .wrap {
+  /* dvh, not vh: on phones the URL bar is part of `vh`, so `100vh` would put the
+     primary button under it. */
+  height: 100dvh;
   max-width: 700px;
   margin: 0 auto;
-  padding: 48px 20px 96px;
+  padding: 24px 20px;
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  /* Lets the flexible child shrink below its content height instead of
+     pushing the shell past the viewport. */
+  min-height: 0;
+}
+
+/* The one card the wizard shows: header and nav pinned, fields scroll between
+   them when the viewport is short. */
+.wrap > form.card {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.card-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* Keeps focus rings on full-width inputs off the scrollbar. */
+  padding-right: 4px;
+}
+
+/* Screens made of several cards (success, status) scroll as a group instead. */
+.scroll-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.scroll-area > *:last-child {
+  margin-bottom: 4px;
 }
 
 /* Brand Header Component */
@@ -78,7 +127,8 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
+  flex: 0 0 auto;
 }
 
 .brand-logo {
@@ -116,11 +166,12 @@ body {
 }
 
 h1 {
-  font-size: 30px;
+  font-size: 25px;
   line-height: 1.25;
-  margin: 0 0 12px;
+  margin: 0 0 6px;
   font-weight: 700;
   letter-spacing: -0.02em;
+  flex: 0 0 auto;
 }
 
 h2 {
@@ -142,23 +193,20 @@ p {
 
 .lede {
   color: var(--muted);
-  font-size: 16px;
-  margin-bottom: 28px;
+  font-size: 15px;
+  margin-bottom: 16px;
   line-height: 1.5;
+  flex: 0 0 auto;
 }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 28px;
-  margin-bottom: 20px;
+  padding: 22px 24px;
+  margin-bottom: 16px;
   box-shadow: var(--shadow-md);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card.dim {
-  opacity: 0.55;
 }
 
 .step-head {
@@ -166,16 +214,6 @@ p {
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;
-}
-
-.step-num {
-  flex: 0 0 auto;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 1px 9px;
 }
 
 .hint {
@@ -209,7 +247,9 @@ textarea {
   border-radius: 10px;
   background: var(--bg);
   color: var(--text);
-  font-size: 15px;
+  /* 16px exactly: iOS Safari zooms the page in when a focused field is smaller,
+     which would break the one-viewport layout on every tap. */
+  font-size: 16px;
   font-family: inherit;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -424,10 +464,6 @@ code {
   font-weight: 600;
 }
 
-.spacer {
-  height: 8px;
-}
-
 /* Step wizard */
 
 .stepper {
@@ -436,7 +472,8 @@ code {
   flex-wrap: wrap;
   gap: 8px;
   padding: 0;
-  margin: 0 0 24px;
+  margin: 0 0 14px;
+  flex: 0 0 auto;
 }
 
 .stepper-link {
@@ -509,17 +546,6 @@ code {
   border-color: transparent;
 }
 
-.optional-tag {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 2px 8px;
-}
-
 .step-head h2:focus {
   outline: none;
 }
@@ -533,9 +559,10 @@ code {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 28px;
-  padding-top: 20px;
+  margin-top: 16px;
+  padding-top: 16px;
   border-top: 1px solid var(--border);
+  flex: 0 0 auto;
 }
 
 .step-nav-end {
@@ -593,22 +620,16 @@ code {
 }
 
 .cli-aside {
-  margin-top: 26px;
-  padding: 18px;
+  margin-top: 20px;
+  padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--bg);
   font-size: 14px;
 }
 
-.cli-aside p {
+.hint-inline {
   color: var(--muted);
-  margin: 6px 0 12px;
-  line-height: 1.5;
-}
-
-.cli-aside p:last-child {
-  margin-bottom: 0;
 }
 
 .cli-command {
@@ -619,8 +640,8 @@ code {
   color: var(--code-text);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 10px 14px;
-  margin-bottom: 12px;
+  padding: 9px 14px;
+  margin-top: 10px;
 }
 
 .cli-command code {
@@ -708,4 +729,253 @@ code {
 .button-link.secondary:hover {
   background: var(--surface-hover);
   box-shadow: none;
+}
+
+/* Two fields per row, so the five S3 values do not read as a long column. */
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16px;
+}
+
+.field-grid .span-2 {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 560px) {
+  .field-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Show/hide toggle sitting inside the password input. */
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 64px;
+}
+
+.password-field .link {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin: 0 0 14px;
+}
+
+.tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 8px 12px;
+  color: var(--muted);
+  font-size: 14px;
+  box-shadow: none;
+}
+
+.tab:hover:not(:disabled) {
+  background: none;
+  box-shadow: none;
+  color: var(--text);
+}
+
+.tab[aria-selected='true'] {
+  color: var(--text);
+  border-bottom-color: var(--primary);
+  font-weight: 650;
+}
+
+/* Optional media/AI forms on the status page: collapsed by default so the page
+   stays short, using <details> rather than open/close state. */
+details.card > summary {
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 650;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+details.card > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.card > summary::before {
+  content: '›';
+  display: inline-block;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+
+details.card[open] > summary {
+  margin-bottom: 12px;
+}
+
+details.card[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+/* Generated environment blocks: capped so a long one never pushes the copy
+   button out of reach. */
+.env-block {
+  max-height: 220px;
+  overflow: auto;
+  margin-bottom: 0;
+}
+
+/*
+ * Phones and very short windows.
+ *
+ * The one-viewport shell is a desktop nicety. On a phone it fights the on-screen
+ * keyboard — which shrinks `dvh` mid-typing and leaves a scrollable box inside a
+ * fixed box — so the page reverts to ordinary document scroll, which is what a
+ * phone user expects anyway. The rest of these rules are sizing.
+ */
+@media (max-width: 560px), (max-height: 560px) {
+  body {
+    overflow: auto;
+  }
+
+  .wrap {
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .wrap > form.card {
+    flex: 0 0 auto;
+  }
+
+  .card-body,
+  .scroll-area {
+    overflow: visible;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .wrap {
+    padding-top: 16px;
+  }
+
+  h1 {
+    font-size: 21px;
+  }
+
+  .lede {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  .card {
+    padding: 18px 16px;
+    border-radius: 14px;
+  }
+
+  /* Numbers only: three labelled pills do not fit a 360px screen without
+     wrapping onto a second row and eating the card's height. */
+  .stepper-title {
+    display: none;
+  }
+
+  .stepper {
+    gap: 6px;
+  }
+
+  .stepper-link {
+    padding: 6px 10px;
+  }
+
+  .stepper li.current .stepper-link {
+    /* The current step keeps its label — it is the only one that names where
+       you are now that the others are numbers. */
+    padding-right: 14px;
+  }
+
+  .stepper li.current .stepper-title {
+    display: inline;
+  }
+
+  /* Full-width, thumb-sized actions rather than a cramped row. */
+  .step-nav button,
+  .actions button,
+  .actions .button-link {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
+  .step-nav-end {
+    flex: 1 1 auto;
+  }
+
+  .review-row {
+    display: block;
+    padding: 10px 0;
+  }
+
+  .review-row dt {
+    flex: none;
+    color: var(--muted);
+  }
+
+  .review-row dd {
+    margin-top: 2px;
+  }
+
+  /* Nobody scaffolds a project from their phone: the command is unusable here
+     and only pushes the fields down. */
+  .cli-aside {
+    display: none;
+  }
+
+  label {
+    margin: 12px 0 4px;
+  }
+
+  input[type='text'],
+  input[type='email'],
+  input[type='password'] {
+    padding: 10px 12px;
+  }
+
+  .step-head {
+    margin-bottom: 6px;
+  }
+
+  h2 {
+    font-size: 17px;
+  }
+
+  .hint {
+    margin-bottom: 10px;
+  }
+
+  pre {
+    font-size: 12px;
+  }
+}
+
+/* Landscape phones and short desktop windows: trim the header, since the page
+   scrolls here anyway. */
+@media (max-height: 560px) {
+  h1 {
+    font-size: 19px;
+    margin-bottom: 8px;
+  }
+
+  .wrap {
+    padding-top: 14px;
+  }
 }

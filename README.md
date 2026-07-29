@@ -10,18 +10,14 @@ Click the button above. Vercel copies this project to your own GitHub account an
 puts it online — you do not need to fill in any settings yet.
 
 When the deployment finishes, **open your new site and add `/setup` to the
-address**, for example `https://my-chai-site.vercel.app/setup`. A short wizard
-walks you through the rest:
+address**, for example `https://my-chai-site.vercel.app/setup`. Three steps:
 
-1. **Name your site.**
+1. **Your site and login.** The site name, plus the email address and password
+   you will use to edit it.
 2. **Connect a database.** Free to create; the wizard links to
-   [Turso](https://turso.tech) and explains what to copy.
-3. **Create your login.** Pick the email address and password you will use to
-   edit your site.
-4. **Media storage** (recommended) and **AI features** (optional).
-
-The wizard then creates your database tables, your account, and your site, and
-shows you a block of settings to copy.
+   [Turso](https://turso.tech) and checks the connection before moving on.
+3. **Create.** The wizard creates your database tables, your account, and your
+   site, then shows you a block of settings to copy.
 
 Paste those settings into Vercel under **Settings → Environment Variables**, then
 **redeploy** from the **Deployments** tab. That is it — sign in at `/admin` and
@@ -29,7 +25,17 @@ start building.
 
 > **Why the extra redeploy?** The settings include your database password and
 > other secrets. They belong in your hosting provider's settings, not in the
-> code, and a site only picks up new settings when it is deployed again.
+> code, and a site only picks up new settings when it is deployed again. You
+> only ever have to do this once.
+
+Media storage and AI are optional and are not part of the wizard. After that
+first redeploy, open `/setup` again: it shows what is configured and gives you a
+form for each, generating the exact settings to paste in.
+
+Setup disables itself once your site is configured, so `/setup` is safe to leave
+in place as a status page. To remove it entirely, delete `src/app/(setup)` and
+the `/setup` redirect in `src/proxy.ts` — all of the wizard's code lives in those
+two places.
 
 Nothing you type into the wizard is stored on the server. It runs on your own
 deployment, talks to your own database, and hands the values back to you.
@@ -53,7 +59,8 @@ settings screen is **Site configuration → Environment variables → Import fro
 | `CHAIBUILDER_APP_KEY` | Yes | Identifies your site in the database. |
 | `NEXT_PUBLIC_SERVER_URL` | Recommended | Your site's public address, used in sitemaps and share links. |
 | `BUCKET_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Recommended | Object storage for uploads. **Without these, uploaded images are lost on every deploy.** `S3_ENDPOINT` is also needed for Cloudflare R2. |
-| `OPENROUTER_API_KEY` | Optional | Enables AI-assisted editing. |
+| `AI_GATEWAY_API_KEY` | Optional | Enables AI-assisted editing through the Vercel AI Gateway. |
+| `OPENROUTER_API_KEY` | Optional | Enables AI-assisted editing through [OpenRouter](https://openrouter.ai). Use this *or* `AI_GATEWAY_API_KEY`. |
 | `PAYLOAD_ADMIN_ROUTE` | Optional | Serves the admin panel from a custom path. |
 
 Visit `/setup` on a configured site at any time to see which of these are in

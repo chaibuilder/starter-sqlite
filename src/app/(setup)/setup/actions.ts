@@ -3,9 +3,9 @@
 import { getPayload, type Migration } from 'payload'
 import { buildPayloadConfig } from '@/payload.config'
 import { isConfigured } from '@/lib/is-configured'
-import { createAppRecord, findUserIdByEmail } from '@/lib/setup/create-app-record'
-import { describeDbError } from '@/lib/setup/status'
-import { envDbCredentials, openDb, type DbCredentials } from '@/lib/setup/db'
+import { createAppRecord, findUserIdByEmail } from '../lib/create-app-record'
+import { describeDbError } from '../lib/status'
+import { envDbCredentials, openDb, type DbCredentials } from '../lib/db'
 import { migrations } from '@/migrations'
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string }
@@ -116,6 +116,7 @@ export async function runSetup(input: SetupInput): Promise<ActionResult<{ appId:
 
   if (!appName) return { ok: false, error: 'Enter a name for your site.' }
   if (!email) return { ok: false, error: 'Enter an email address.' }
+  if (!email.includes('@')) return { ok: false, error: 'That does not look like an email address.' }
   if (!input.password || input.password.length < 4) {
     return { ok: false, error: 'Password must be at least 4 characters.' }
   }

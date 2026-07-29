@@ -128,17 +128,24 @@ export async function getSetupStatus(): Promise<SetupStatus> {
     state: mediaConfigured ? 'ok' : 'warn',
     detail: mediaConfigured
       ? 'Uploads are stored in your bucket.'
-      : 'Not configured. Uploaded images will disappear on the next deploy.',
+      : 'Not configured. Uploaded images will disappear on the next deploy. Use the form below.',
   })
 
+  // `OPENAI_COMPATIBLE_API_KEY` is no longer offered by the setup forms, but the
+  // engine still honours it — a deployment already using one must not be told
+  // its AI features are off.
   const aiConfigured = Boolean(
-    process.env.OPENROUTER_API_KEY || process.env.OPENAI_COMPATIBLE_API_KEY,
+    process.env.AI_GATEWAY_API_KEY ||
+      process.env.OPENROUTER_API_KEY ||
+      process.env.OPENAI_COMPATIBLE_API_KEY,
   )
   checks.push({
     id: 'ai',
     label: 'AI features',
     state: aiConfigured ? 'ok' : 'warn',
-    detail: aiConfigured ? 'An AI provider key is set.' : 'Optional. No AI provider key is set.',
+    detail: aiConfigured
+      ? 'An AI provider key is set.'
+      : 'Optional. Add a Vercel AI Gateway or OpenRouter key below to write content with AI.',
   })
 
   const siteUrlConfigured = Boolean(

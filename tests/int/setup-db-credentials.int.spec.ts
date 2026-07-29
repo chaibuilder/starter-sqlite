@@ -1,8 +1,8 @@
 // @vitest-environment node
 import http from 'node:http'
 import { afterEach, describe, expect, it } from 'vitest'
-import { describeDbError } from '@/lib/setup/status'
-import { openDb } from '@/lib/setup/db'
+import { describeDbError } from '@/app/(setup)/lib/status'
+import { openDb } from '@/app/(setup)/lib/db'
 import { resolveDatabase } from '@/payload.config'
 
 /**

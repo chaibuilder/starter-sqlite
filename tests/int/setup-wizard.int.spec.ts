@@ -3,9 +3,9 @@ import { existsSync, rmSync } from 'node:fs'
 import path from 'node:path'
 import type { Migration } from 'payload'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { openDb } from '@/lib/setup/db'
-import { createAppRecord, findUserIdByEmail } from '@/lib/setup/create-app-record'
-import { DEFAULT_APP_THEME, DEFAULT_BLOCKS, getDefaultHomeSeo } from '@/lib/setup/defaults'
+import { openDb } from '@/app/(setup)/lib/db'
+import { createAppRecord, findUserIdByEmail } from '@/app/(setup)/lib/create-app-record'
+import { DEFAULT_APP_THEME, DEFAULT_BLOCKS, getDefaultHomeSeo } from '@/app/(setup)/lib/defaults'
 
 /**
  * Exercises the database work the `/setup` wizard performs, against a scratch

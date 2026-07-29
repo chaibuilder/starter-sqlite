@@ -15,7 +15,8 @@ address**, for example `https://my-chai-site.vercel.app/setup`. Three steps:
 1. **Your site and login.** The site name, plus the email address and password
    you will use to edit it.
 2. **Connect a database.** Free to create; the wizard links to
-   [Neon](https://neon.com) and checks the connection before moving on.
+   [Neon](https://neon.com), [Supabase](https://supabase.com) and other PostgreSQL
+   providers, and checks the connection before moving on.
 3. **Create.** Optionally add media storage and an AI key — both are collapsed,
    and leaving them closed skips them. The wizard then creates your database
    tables, your account, and your site, and shows you the environment variables

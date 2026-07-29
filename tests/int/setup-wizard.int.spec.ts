@@ -178,7 +178,7 @@ describe('setup wizard seeding', () => {
       // The first site keeps its own name, home page and membership: the new
       // one is alongside it, not on top of it.
       const firstStill = await client.execute({
-        sql: 'SELECT name FROM apps WHERE id = ?',
+        sql: 'SELECT name FROM apps WHERE id = $1',
         args: [firstId],
       })
       expect(String(firstStill.rows[0].name)).toBe('Test Site')
@@ -188,13 +188,13 @@ describe('setup wizard seeding', () => {
         [secondId, 'Second Site'],
       ]) {
         const pages = await client.execute({
-          sql: 'SELECT slug FROM app_pages WHERE app = ?',
+          sql: 'SELECT slug FROM app_pages WHERE app = $1',
           args: [id],
         })
         expect(pages.rows.map((r) => String(r.slug)), `home page for ${name}`).toEqual(['/'])
 
         const membership = await client.execute({
-          sql: 'SELECT role FROM app_users WHERE app = ? AND user = ?',
+          sql: 'SELECT role FROM app_users WHERE app = $1 AND "user" = $2',
           args: [id, userId!],
         })
         expect(membership.rows.map((r) => String(r.role)), `admin of ${name}`).toEqual(['admin'])

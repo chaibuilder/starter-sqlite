@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { runSetup, testConnection } from '@/app/(setup)/setup/actions'
+import { TEST_DATABASE_URL } from '../helpers/postgres'
 
 /**
  * Server-side validation for the wizard's merged first step.
@@ -9,7 +10,7 @@ import { runSetup, testConnection } from '@/app/(setup)/setup/actions'
  * malformed request and Payload: these all have to reject before the action
  * boots an instance, which is why they are cheap enough to test directly.
  */
-const DB = { source: 'input', url: 'file:./.test.payload.db' } as const
+const DB = { source: 'input', url: TEST_DATABASE_URL } as const
 const VALID = { appName: 'Test Site', email: 'owner@example.com', password: 'secret' }
 
 describe('runSetup validation', () => {
@@ -48,7 +49,7 @@ describe('testConnection', () => {
   })
 
   it('connects to a reachable database', async () => {
-    const result = await testConnection({ url: 'file:./.test.payload.db' })
+    const result = await testConnection({ url: TEST_DATABASE_URL })
     expect(result.ok).toBe(true)
   })
 })

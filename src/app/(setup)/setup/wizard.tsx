@@ -348,9 +348,14 @@ export function SetupWizard({
                 </div>
               )}
               <p className="hint">
-                Your pages and content live in a PostgreSQL database — a free one from{' '}
-                <NewTabLink href="https://neon.com">Neon</NewTabLink> works well. Create it, then
-                copy its <code>postgres://</code> connection string here.
+                Your pages and content live in a PostgreSQL database. Any provider works —{' '}
+                <NewTabLink href="https://neon.com">Neon</NewTabLink>,{' '}
+                <NewTabLink href="https://supabase.com">Supabase</NewTabLink>,{' '}
+                <NewTabLink href="https://vercel.com/marketplace/category/storage">
+                  Vercel Postgres
+                </NewTabLink>{' '}
+                and others have a free tier — or your own server. Create the database, then copy its{' '}
+                <code>postgres://</code> connection string here.
               </p>
 
               <label htmlFor="dbUrl">Database connection string</label>

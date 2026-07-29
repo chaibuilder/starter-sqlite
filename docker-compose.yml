@@ -1,0 +1,38 @@
+version: '3'
+
+services:
+  payload:
+    image: node:20-alpine
+    ports:
+      - '3000:3000'
+    volumes:
+      - .:/home/node/app
+      - node_modules:/home/node/app/node_modules
+    working_dir: /home/node/app/
+    command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm dev"
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+
+  # From another container, DATABASE_URL uses 'postgres' as the hostname, ie.
+  # postgres://postgres:postgres@postgres:5432/chaibuilder. From your own machine
+  # it is 'localhost', which is what .env.example uses.
+  #
+  # The postgis image rather than plain postgres: Site Config stores a map
+  # location as a geographic point, which needs the PostGIS extension.
+  postgres:
+    restart: always
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chaibuilder
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+
+volumes:
+  pgdata:
+  node_modules:

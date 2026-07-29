@@ -1,0 +1,21 @@
+packages:
+  - '.'
+
+allowBuilds:
+  esbuild: true
+  msw: true
+  sharp: true
+  unrs-resolver: true
+
+minimumReleaseAgeExclude:
+  - chaipro@0.1.0 || 0.1.13 || 0.1.14 || 0.2.1 || 0.2.3 || 0.2.4 || 0.2.6
+
+overrides:
+  "framer-motion@12.23.20>motion-dom": "12.23.20"
+  "framer-motion@12.23.20>motion-utils": "12.23.6"
+  # pin Payload stack — caret on storage-s3 pulled 3.86 and duplicated @payloadcms/ui context
+  "@payloadcms/ui": "3.85.1"
+  "@payloadcms/storage-s3": "3.85.1"
+  "@payloadcms/plugin-cloud-storage": "3.85.1"
+  "@payloadcms/db-postgres": "3.85.1"
+  "payload": "3.85.1"

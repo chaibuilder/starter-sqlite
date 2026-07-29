@@ -41,9 +41,19 @@ const nextConfig: NextConfig = {
         pathname: '/api/media/file/**',
       },
     ],
-    remotePatterns: [{
-      hostname: '*.chaibuilder.com',
-    }],
+    remotePatterns: [
+      {
+        hostname: '*.chaibuilder.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'picsum.photos',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.picsum.photos',
+      },
+    ],
   },
   webpack: (webpackConfig) => {
     webpackConfig.resolve.extensionAlias = {

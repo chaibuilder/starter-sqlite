@@ -68,31 +68,46 @@ export async function getSetupStatus(): Promise<SetupStatus> {
     })
 
     if (schemaReady) {
-      const apps = await client.execute('SELECT id, name FROM apps LIMIT 2')
-      const first = apps.rows[0]
-      appId = first?.id == null ? null : String(first.id)
-      appName = first?.name == null ? null : String(first.name)
+      // One database can hold any number of sites, so the deployment's own key
+      // decides which row this page is reporting on — not whichever happens to
+      // come back first.
+      const owned = envAppKey
+        ? await client.execute({
+            sql: 'SELECT id, name FROM apps WHERE id = ? LIMIT 1',
+            args: [envAppKey],
+          })
+        : null
+      const match = owned?.rows[0]
 
-      if (!appId) {
-        checks.push({
-          id: 'app',
-          label: 'Your site',
-          state: 'error',
-          detail: 'No site found in the database. Re-run setup to create one.',
-        })
-      } else if (envAppKey && envAppKey !== appId && apps.rows.length === 1) {
-        checks.push({
-          id: 'app',
-          label: 'Your site',
-          state: 'error',
-          detail: `CHAIBUILDER_APP_KEY does not match the site in this database. Set it to ${appId}.`,
-        })
-      } else {
+      if (match) {
+        appId = String(match.id)
+        appName = match.name == null ? null : String(match.name)
         checks.push({
           id: 'app',
           label: 'Your site',
           state: 'ok',
           detail: appName ? `"${appName}" is ready.` : 'Ready.',
+        })
+      } else {
+        // Either the key names a site that is not here, or there is no key to
+        // go on. Two rows is enough to tell "the only site" from "one of many".
+        const others = await client.execute('SELECT id, name FROM apps LIMIT 2')
+        const only = others.rows.length === 1 ? others.rows[0] : null
+        appId = only?.id == null ? null : String(only.id)
+        appName = only?.name == null ? null : String(only.name)
+
+        checks.push({
+          id: 'app',
+          label: 'Your site',
+          state: 'error',
+          detail:
+            others.rows.length === 0
+              ? 'No site found in the database. Re-run setup to create one.'
+              : !envAppKey
+                ? 'CHAIBUILDER_APP_KEY is not set, so there is no way to tell which site this deployment serves.'
+                : only
+                  ? `CHAIBUILDER_APP_KEY does not match the site in this database. Set it to ${String(only.id)}.`
+                  : 'CHAIBUILDER_APP_KEY does not match any site in this database. Check that you copied the value setup gave you.',
         })
       }
 
@@ -128,17 +143,24 @@ export async function getSetupStatus(): Promise<SetupStatus> {
     state: mediaConfigured ? 'ok' : 'warn',
     detail: mediaConfigured
       ? 'Uploads are stored in your bucket.'
-      : 'Not configured. Uploaded images will disappear on the next deploy.',
+      : 'Not configured. Uploaded images will disappear on the next deploy. Use the form below.',
   })
 
+  // `OPENAI_COMPATIBLE_API_KEY` is no longer offered by the setup forms, but the
+  // engine still honours it — a deployment already using one must not be told
+  // its AI features are off.
   const aiConfigured = Boolean(
-    process.env.OPENROUTER_API_KEY || process.env.OPENAI_COMPATIBLE_API_KEY,
+    process.env.AI_GATEWAY_API_KEY ||
+      process.env.OPENROUTER_API_KEY ||
+      process.env.OPENAI_COMPATIBLE_API_KEY,
   )
   checks.push({
     id: 'ai',
     label: 'AI features',
     state: aiConfigured ? 'ok' : 'warn',
-    detail: aiConfigured ? 'An AI provider key is set.' : 'Optional. No AI provider key is set.',
+    detail: aiConfigured
+      ? 'An AI provider key is set.'
+      : 'Optional. Add a Vercel AI Gateway or OpenRouter key below to write content with AI.',
   })
 
   const siteUrlConfigured = Boolean(

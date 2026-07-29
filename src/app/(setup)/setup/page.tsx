@@ -1,15 +1,18 @@
 import { adminUrl } from '@/utilities/adminRoute'
 import { isConfigured } from '@/lib/is-configured'
-import { envDbCredentials, openDb } from '@/lib/setup/db'
-import { describeDbError, getSetupStatus } from '@/lib/setup/status'
-import { SetupWizard, type EnvDatabase, type EnvExtras } from './wizard'
+import { envDbCredentials, openDb } from '../lib/db'
+import { detectHost, hostEnvUrl } from '../lib/host'
+import { describeDbError, getSetupStatus } from '../lib/status'
+import { SetupWizard, type EnvDatabase } from './wizard'
 import { BrandHeader } from './BrandHeader'
+import { NewTabLink } from './NewTabLink'
 
 // Setup reflects live environment and database state, so it must never be
 // cached or prerendered.
 export const dynamic = 'force-dynamic'
 
 const BADGE_SYMBOL = { ok: '✓', warn: '!', error: '✕' } as const
+const DOCS_URL = 'https://www.chaibuilder.com/docs'
 
 /**
  * Whether this deployment already carries usable database credentials, e.g. the
@@ -38,29 +41,49 @@ async function probeEnvDatabase(): Promise<EnvDatabase> {
 }
 
 /**
- * Optional services this deployment already carries settings for.
- *
- * Presence only — unlike the database there is no cheap round-trip that proves
- * an S3 bucket or an AI key works, so the wizard says "already set" rather than
- * claiming it verified them.
+ * Whether uploads already have somewhere to live. Presence only — unlike the
+ * database there is no cheap round-trip that proves a bucket works, so the
+ * wizard never claims to have verified it. It only decides whether the success
+ * screen warns that uploads will not survive a redeploy.
  */
-function probeEnvExtras(): EnvExtras {
-  return {
-    media: Boolean(
-      process.env.BUCKET_NAME && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY,
-    ),
-    ai: Boolean(process.env.OPENROUTER_API_KEY || process.env.OPENAI_COMPATIBLE_API_KEY),
-  }
+function hasEnvMedia(): boolean {
+  return Boolean(
+    process.env.BUCKET_NAME && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY,
+  )
+}
+
+/** Same presence-only rule, including the variable the forms no longer offer. */
+function hasEnvAi(): boolean {
+  return Boolean(
+    process.env.AI_GATEWAY_API_KEY ||
+      process.env.OPENROUTER_API_KEY ||
+      process.env.OPENAI_COMPATIBLE_API_KEY,
+  )
 }
 
 export default async function SetupPage() {
   if (!isConfigured()) {
-    return <SetupWizard envDatabase={await probeEnvDatabase()} envExtras={probeEnvExtras()} />
+    const host = detectHost()
+    return (
+      <SetupWizard
+        envDatabase={await probeEnvDatabase()}
+        envMedia={hasEnvMedia()}
+        envAi={hasEnvAi()}
+        host={host}
+        hostEnvUrl={hostEnvUrl(host)}
+      />
+    )
   }
 
   const status = await getSetupStatus()
   const problems = status.checks.filter((check) => check.state === 'error')
-  const suggestions = status.checks.filter((check) => check.state === 'warn')
+  // `getSetupStatus` is the single source of truth for what is configured: the
+  // same check that renders a row also decides whether its form is offered.
+  const needsMedia = status.checks.some((check) => check.id === 'media' && check.state === 'warn')
+  const needsAi = status.checks.some((check) => check.id === 'ai' && check.state === 'warn')
+  const needsSiteUrl = status.checks.some(
+    (check) => check.id === 'site-url' && check.state === 'warn',
+  )
 
   return (
     <div className="wrap">
@@ -72,74 +95,79 @@ export default async function SetupPage() {
           : 'Some required settings are not working. Details are below.'}
       </p>
 
-      <div className="card">
-        <ul className="checklist">
-          {status.checks.map((check) => (
-            <li key={check.id}>
-              <span className={`badge ${check.state}`}>{BADGE_SYMBOL[check.state]}</span>
-              <span>
-                <span className="check-label">{check.label}</span>
-                <br />
-                <span className="check-detail">{check.detail}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {suggestions.length > 0 && (
+      <div className="scroll-area">
         <div className="card">
-          <h2>Recommended next steps</h2>
-          {suggestions.some((check) => check.id === 'media') && (
-            <>
-              <h3>Turn on media storage</h3>
-              <p className="hint">
-                Add <code>BUCKET_NAME</code>, <code>AWS_ACCESS_KEY_ID</code> and{' '}
-                <code>AWS_SECRET_ACCESS_KEY</code> to your environment variables, then deploy again.
-                Cloudflare R2 also needs <code>S3_ENDPOINT</code>.
-              </p>
-            </>
-          )}
-          {suggestions.some((check) => check.id === 'ai') && (
-            <>
-              <h3>Turn on AI features</h3>
-              <p className="hint">
-                Add <code>OPENROUTER_API_KEY</code> from <a href="https://openrouter.ai">
-                  OpenRouter
-                </a>{' '}
-                to write and edit content with AI.
-              </p>
-            </>
-          )}
-          {suggestions.some((check) => check.id === 'site-url') && (
-            <>
-              <h3>Set your site address</h3>
-              <p className="hint">
-                Add <code>NEXT_PUBLIC_SERVER_URL</code> with your site&rsquo;s full address so
-                sitemaps and shared links are correct.
-              </p>
-            </>
-          )}
+          <ul className="checklist">
+            {status.checks.map((check) => (
+              <li key={check.id}>
+                <span className={`badge ${check.state}`}>{BADGE_SYMBOL[check.state]}</span>
+                <span>
+                  <span className="check-label">{check.label}</span>
+                  <br />
+                  <span className="check-detail">{check.detail}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
-      )}
 
-      <div className="card">
-        <h2>Your site</h2>
-        {status.appId && (
-          <p className="hint">
-            Site ID: <code>{status.appId}</code>
-          </p>
+        {(needsMedia || needsAi || needsSiteUrl) && (
+          <div className="card">
+            <h2>Optional extras</h2>
+            <p className="hint">
+              Each of these is a matter of adding environment variables to your host and deploying
+              again — there is no need to run setup a second time.{' '}
+              <NewTabLink href={DOCS_URL}>The docs</NewTabLink> walk through each one.
+            </p>
+            <ul className="steps">
+              {needsMedia && (
+                <li>
+                  <strong>Media storage</strong> — <code>BUCKET_NAME</code>,{' '}
+                  <code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>, plus{' '}
+                  <code>S3_ENDPOINT</code> for Cloudflare R2. Without it, uploads are lost on every
+                  deploy.
+                </li>
+              )}
+              {needsAi && (
+                <li>
+                  <strong>AI</strong> — <code>AI_GATEWAY_API_KEY</code> for the Vercel AI Gateway,
+                  or <code>OPENROUTER_API_KEY</code> for OpenRouter. One or the other, not both.
+                </li>
+              )}
+              {needsSiteUrl && (
+                <li>
+                  <strong>Site address</strong> — <code>NEXT_PUBLIC_SERVER_URL</code>, so sitemaps
+                  and shared links point at the right place.
+                </li>
+              )}
+            </ul>
+          </div>
         )}
-        <div className="actions">
-          {/* Styled links rather than buttons wrapped in anchors, which is
-              invalid HTML and confuses keyboard and assistive-tech users. */}
-          <a className="button-link" href={adminUrl('editor')}>
-            Open the editor
-          </a>
-          <a className="button-link secondary" href="/">
-            View your site
-          </a>
+
+        <div className="card">
+          <h2>Your site</h2>
+          {status.appId && (
+            <p className="hint">
+              Site ID: <code>{status.appId}</code>
+            </p>
+          )}
+          <div className="actions">
+            {/* Styled links rather than buttons wrapped in anchors, which is
+                invalid HTML and confuses keyboard and assistive-tech users. */}
+            <NewTabLink className="button-link" href={adminUrl('editor')}>
+              Open the editor
+            </NewTabLink>
+            <NewTabLink className="button-link secondary" href="/">
+              View your site
+            </NewTabLink>
+          </div>
         </div>
+
+        <p className="hint">
+          Setup disables itself once configured, so it is safe to leave in place. To remove it,
+          delete <code>src/app/(setup)</code> and the <code>/setup</code> redirect in{' '}
+          <code>src/proxy.ts</code>.
+        </p>
       </div>
     </div>
   )

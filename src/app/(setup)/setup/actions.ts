@@ -3,9 +3,9 @@
 import { getPayload, type Migration } from 'payload'
 import { buildPayloadConfig } from '@/payload.config'
 import { isConfigured } from '@/lib/is-configured'
-import { createAppRecord, findUserIdByEmail } from '@/lib/setup/create-app-record'
-import { describeDbError } from '@/lib/setup/status'
-import { envDbCredentials, openDb, type DbCredentials } from '@/lib/setup/db'
+import { createAppRecord, findUserIdByEmail } from '../lib/create-app-record'
+import { describeDbError } from '../lib/status'
+import { envDbCredentials, openDb, type DbCredentials } from '../lib/db'
 import { migrations } from '@/migrations'
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string }
@@ -116,6 +116,7 @@ export async function runSetup(input: SetupInput): Promise<ActionResult<{ appId:
 
   if (!appName) return { ok: false, error: 'Enter a name for your site.' }
   if (!email) return { ok: false, error: 'Enter an email address.' }
+  if (!email.includes('@')) return { ok: false, error: 'That does not look like an email address.' }
   if (!input.password || input.password.length < 4) {
     return { ok: false, error: 'Password must be at least 4 characters.' }
   }
@@ -195,13 +196,10 @@ export async function runSetup(input: SetupInput): Promise<ActionResult<{ appId:
 
   const client = openDb(credentials)
   try {
-    const existing = await client.execute('SELECT id FROM apps LIMIT 1')
-    if (existing.rows[0]?.id) {
-      // Setup was already run against this database; reuse it rather than
-      // creating a second site the user did not ask for.
-      return { ok: true, data: { appId: String(existing.rows[0].id) } }
-    }
-
+    // Always a new site, even when the database already holds others: one
+    // database is meant to carry any number of them, each identified by its own
+    // CHAIBUILDER_APP_KEY. Setup only runs on a deployment that has no key yet,
+    // so reaching here means the user is asking for a site they do not have.
     const { appId } = await createAppRecord(client, { appName, userId })
     return { ok: true, data: { appId } }
   } catch (error) {

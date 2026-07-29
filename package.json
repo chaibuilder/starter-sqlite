@@ -28,7 +28,7 @@
     "@payloadcms/ui": "3.85.1",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.11",
-    "chaipro": "^0.2.4",
+    "chaipro": "^0.2.6",
     "cnfast": "^0.0.8",
     "cross-env": "^7.0.3",
     "dotenv": "16.4.7",

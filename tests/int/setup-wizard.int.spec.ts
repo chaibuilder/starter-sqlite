@@ -144,4 +144,57 @@ describe('setup wizard seeding', () => {
       client.close()
     }
   }, 120_000)
+
+  /**
+   * One database is meant to carry any number of sites, each identified by its
+   * own `CHAIBUILDER_APP_KEY`. Running setup against a database that already
+   * holds a site therefore has to add another one, not hand back the first.
+   */
+  it('adds a second site to a database that already has one', async () => {
+    const client = openDb({ url: DB_URL })
+    try {
+      const before = await client.execute('SELECT id, name FROM apps')
+      expect(before.rows).toHaveLength(1)
+      const firstId = String(before.rows[0].id)
+
+      const userId = await findUserIdByEmail(client, 'owner@example.com')
+      expect(userId).not.toBeNull()
+
+      const { appId: secondId } = await createAppRecord(client, {
+        appName: 'Second Site',
+        userId: userId!,
+      })
+      expect(secondId).not.toBe(firstId)
+
+      const after = await client.execute('SELECT id, name FROM apps ORDER BY name')
+      expect(after.rows.map((r) => String(r.name))).toEqual(['Second Site', 'Test Site'])
+
+      // The first site keeps its own name, home page and membership: the new
+      // one is alongside it, not on top of it.
+      const firstStill = await client.execute({
+        sql: 'SELECT name FROM apps WHERE id = ?',
+        args: [firstId],
+      })
+      expect(String(firstStill.rows[0].name)).toBe('Test Site')
+
+      for (const [id, name] of [
+        [firstId, 'Test Site'],
+        [secondId, 'Second Site'],
+      ]) {
+        const pages = await client.execute({
+          sql: 'SELECT slug FROM app_pages WHERE app = ?',
+          args: [id],
+        })
+        expect(pages.rows.map((r) => String(r.slug)), `home page for ${name}`).toEqual(['/'])
+
+        const membership = await client.execute({
+          sql: 'SELECT role FROM app_users WHERE app = ? AND user = ?',
+          args: [id, userId!],
+        })
+        expect(membership.rows.map((r) => String(r.role)), `admin of ${name}`).toEqual(['admin'])
+      }
+    } finally {
+      client.close()
+    }
+  }, 60_000)
 })

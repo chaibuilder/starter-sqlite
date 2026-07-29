@@ -196,13 +196,10 @@ export async function runSetup(input: SetupInput): Promise<ActionResult<{ appId:
 
   const client = openDb(credentials)
   try {
-    const existing = await client.execute('SELECT id FROM apps LIMIT 1')
-    if (existing.rows[0]?.id) {
-      // Setup was already run against this database; reuse it rather than
-      // creating a second site the user did not ask for.
-      return { ok: true, data: { appId: String(existing.rows[0].id) } }
-    }
-
+    // Always a new site, even when the database already holds others: one
+    // database is meant to carry any number of them, each identified by its own
+    // CHAIBUILDER_APP_KEY. Setup only runs on a deployment that has no key yet,
+    // so reaching here means the user is asking for a site they do not have.
     const { appId } = await createAppRecord(client, { appName, userId })
     return { ok: true, data: { appId } }
   } catch (error) {

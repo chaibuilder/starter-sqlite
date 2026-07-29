@@ -1,5 +1,7 @@
 'use client'
 
+import { NewTabLink } from './NewTabLink'
+
 /** The only two AI providers setup offers. Both need a single key, nothing else. */
 export type AiProvider = 'gateway' | 'openrouter'
 
@@ -158,7 +160,7 @@ export function ExtrasFields({
                 />
                 <span>
                   <strong>
-                    <a href="https://openrouter.ai">OpenRouter</a>
+                    <NewTabLink href="https://openrouter.ai">OpenRouter</NewTabLink>
                   </strong>{' '}
                   — create a key at openrouter.ai.
                 </span>

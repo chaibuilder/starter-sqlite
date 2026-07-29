@@ -4,6 +4,7 @@ import { envBlock, envLine } from '../lib/env-lines'
 import { hasMedia, type Extras } from './ExtrasFields'
 import { BrandHeader } from './BrandHeader'
 import { CopyButton } from './CopyButton'
+import { NewTabLink } from './NewTabLink'
 
 /** Which host this deployment is running on, detected server-side. */
 export type Host = 'vercel' | 'netlify' | 'unknown'
@@ -126,7 +127,9 @@ export function SuccessScreen({
               <li>
                 {hostEnvUrl ? (
                   <>
-                    Open <a href={hostEnvUrl}>this site&rsquo;s environment variables</a> on Netlify.
+                    Open{' '}
+                    <NewTabLink href={hostEnvUrl}>this site&rsquo;s environment variables</NewTabLink>{' '}
+                    on Netlify.
                   </>
                 ) : (
                   <>
@@ -149,13 +152,17 @@ export function SuccessScreen({
               <li>
                 {hostEnvUrl ? (
                   <>
-                    Open <a href={hostEnvUrl}>this project&rsquo;s environment variables</a> on
-                    Vercel.
+                    Open{' '}
+                    <NewTabLink href={hostEnvUrl}>
+                      this project&rsquo;s environment variables
+                    </NewTabLink>{' '}
+                    on Vercel.
                   </>
                 ) : (
                   <>
-                    Open <a href="https://vercel.com/dashboard">vercel.com/dashboard</a>, click this
-                    project, then <strong>Settings</strong> &rarr;{' '}
+                    Open{' '}
+                    <NewTabLink href="https://vercel.com/dashboard">vercel.com/dashboard</NewTabLink>
+                    , click this project, then <strong>Settings</strong> &rarr;{' '}
                     <strong>Environment Variables</strong>.
                   </>
                 )}
@@ -177,7 +184,7 @@ export function SuccessScreen({
           {!mediaAdded && !envMedia && (
             <>
               You skipped media storage, so uploaded images will not survive a redeploy —{' '}
-              <a href={DOCS_URL}>the docs</a> cover adding it later.{' '}
+              <NewTabLink href={DOCS_URL}>the docs</NewTabLink> cover adding it later.{' '}
             </>
           )}
           Setup disables itself once configured: safe to leave, or delete{' '}

@@ -5,6 +5,7 @@ import { detectHost, hostEnvUrl } from '../lib/host'
 import { describeDbError, getSetupStatus } from '../lib/status'
 import { SetupWizard, type EnvDatabase } from './wizard'
 import { BrandHeader } from './BrandHeader'
+import { NewTabLink } from './NewTabLink'
 
 // Setup reflects live environment and database state, so it must never be
 // cached or prerendered.
@@ -116,7 +117,7 @@ export default async function SetupPage() {
             <p className="hint">
               Each of these is a matter of adding environment variables to your host and deploying
               again — there is no need to run setup a second time.{' '}
-              <a href={DOCS_URL}>The docs</a> walk through each one.
+              <NewTabLink href={DOCS_URL}>The docs</NewTabLink> walk through each one.
             </p>
             <ul className="steps">
               {needsMedia && (
@@ -153,12 +154,12 @@ export default async function SetupPage() {
           <div className="actions">
             {/* Styled links rather than buttons wrapped in anchors, which is
                 invalid HTML and confuses keyboard and assistive-tech users. */}
-            <a className="button-link" href={adminUrl('editor')}>
+            <NewTabLink className="button-link" href={adminUrl('editor')}>
               Open the editor
-            </a>
-            <a className="button-link secondary" href="/">
+            </NewTabLink>
+            <NewTabLink className="button-link secondary" href="/">
               View your site
-            </a>
+            </NewTabLink>
           </div>
         </div>
 

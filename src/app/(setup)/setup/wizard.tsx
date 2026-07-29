@@ -10,6 +10,7 @@ import {
   mediaPartlyFilled,
   type Extras,
 } from './ExtrasFields'
+import { NewTabLink } from './NewTabLink'
 import { SuccessScreen, type Host } from './SuccessScreen'
 
 type Progress = 'idle' | 'migrating' | 'creating-admin' | 'creating-app' | 'done'
@@ -349,7 +350,8 @@ export function SetupWizard({
               )}
               <p className="hint">
                 Your pages and content live in a hosted libSQL database — a free one from{' '}
-                <a href="https://turso.tech">Turso</a> works well. Create it, then copy its{' '}
+                <NewTabLink href="https://turso.tech">Turso</NewTabLink> works well. Create it, then
+                copy its{' '}
                 <code>libsql://</code> address here.
               </p>
 

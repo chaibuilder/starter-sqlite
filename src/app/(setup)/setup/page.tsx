@@ -1,9 +1,9 @@
 import { adminUrl } from '@/utilities/adminRoute'
 import { isConfigured } from '@/lib/is-configured'
 import { envDbCredentials, openDb } from '../lib/db'
+import { detectHost, hostEnvUrl } from '../lib/host'
 import { describeDbError, getSetupStatus } from '../lib/status'
 import { SetupWizard, type EnvDatabase } from './wizard'
-import { ExtrasForms } from './ExtrasForms'
 import { BrandHeader } from './BrandHeader'
 
 // Setup reflects live environment and database state, so it must never be
@@ -11,6 +11,7 @@ import { BrandHeader } from './BrandHeader'
 export const dynamic = 'force-dynamic'
 
 const BADGE_SYMBOL = { ok: '✓', warn: '!', error: '✕' } as const
+const DOCS_URL = 'https://www.chaibuilder.com/docs'
 
 /**
  * Whether this deployment already carries usable database credentials, e.g. the
@@ -50,9 +51,27 @@ function hasEnvMedia(): boolean {
   )
 }
 
+/** Same presence-only rule, including the variable the forms no longer offer. */
+function hasEnvAi(): boolean {
+  return Boolean(
+    process.env.AI_GATEWAY_API_KEY ||
+      process.env.OPENROUTER_API_KEY ||
+      process.env.OPENAI_COMPATIBLE_API_KEY,
+  )
+}
+
 export default async function SetupPage() {
   if (!isConfigured()) {
-    return <SetupWizard envDatabase={await probeEnvDatabase()} envMedia={hasEnvMedia()} />
+    const host = detectHost()
+    return (
+      <SetupWizard
+        envDatabase={await probeEnvDatabase()}
+        envMedia={hasEnvMedia()}
+        envAi={hasEnvAi()}
+        host={host}
+        hostEnvUrl={hostEnvUrl(host)}
+      />
+    )
   }
 
   const status = await getSetupStatus()
@@ -91,15 +110,36 @@ export default async function SetupPage() {
           </ul>
         </div>
 
-        <ExtrasForms media={needsMedia} ai={needsAi} />
-
-        {needsSiteUrl && (
+        {(needsMedia || needsAi || needsSiteUrl) && (
           <div className="card">
-            <h2>Set your site address</h2>
+            <h2>Optional extras</h2>
             <p className="hint">
-              Add <code>NEXT_PUBLIC_SERVER_URL</code> with your site&rsquo;s full address so
-              sitemaps and shared links are correct, then redeploy.
+              Each of these is a matter of adding environment variables to your host and deploying
+              again — there is no need to run setup a second time.{' '}
+              <a href={DOCS_URL}>The docs</a> walk through each one.
             </p>
+            <ul className="steps">
+              {needsMedia && (
+                <li>
+                  <strong>Media storage</strong> — <code>BUCKET_NAME</code>,{' '}
+                  <code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>, plus{' '}
+                  <code>S3_ENDPOINT</code> for Cloudflare R2. Without it, uploads are lost on every
+                  deploy.
+                </li>
+              )}
+              {needsAi && (
+                <li>
+                  <strong>AI</strong> — <code>AI_GATEWAY_API_KEY</code> for the Vercel AI Gateway,
+                  or <code>OPENROUTER_API_KEY</code> for OpenRouter. One or the other, not both.
+                </li>
+              )}
+              {needsSiteUrl && (
+                <li>
+                  <strong>Site address</strong> — <code>NEXT_PUBLIC_SERVER_URL</code>, so sitemaps
+                  and shared links point at the right place.
+                </li>
+              )}
+            </ul>
           </div>
         )}
 

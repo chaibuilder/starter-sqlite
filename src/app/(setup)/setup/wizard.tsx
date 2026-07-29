@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from 'react'
 import { runSetup, testConnection } from './actions'
 import { BrandHeader } from './BrandHeader'
 import { CopyButton } from './CopyButton'
-import { SuccessScreen } from './SuccessScreen'
+import {
+  EMPTY_EXTRAS,
+  ExtrasFields,
+  mediaPartlyFilled,
+  type Extras,
+} from './ExtrasFields'
+import { SuccessScreen, type Host } from './SuccessScreen'
 
 type Progress = 'idle' | 'migrating' | 'creating-admin' | 'creating-app' | 'done'
 
@@ -17,9 +23,10 @@ const PROGRESS_LABELS: { key: Exclude<Progress, 'idle' | 'done'>; label: string 
 type StepId = 'site' | 'database' | 'review'
 
 /**
- * Three steps, deliberately. Everything optional — media storage, AI — moved to
- * `/setup` on the configured site, so the path to a working deployment asks only
- * for what it cannot proceed without.
+ * Three steps, deliberately. The two required ones ask only for what setup
+ * cannot proceed without; storage and AI are optional and sit collapsed on the
+ * last step, so whatever the user does fill in ships in the same block of
+ * variables — one paste, one redeploy, whichever they choose.
  */
 const ALL_STEPS: { id: StepId; title: string }[] = [
   { id: 'site', title: 'Your site' },
@@ -49,9 +56,15 @@ function generateSecret(): string {
 export function SetupWizard({
   envDatabase,
   envMedia,
+  envAi,
+  host,
+  hostEnvUrl,
 }: {
   envDatabase: EnvDatabase
   envMedia: boolean
+  envAi: boolean
+  host: Host
+  hostEnvUrl: string | null
 }) {
   const [step, setStep] = useState(0)
   const [furthestStep, setFurthestStep] = useState(0)
@@ -64,6 +77,7 @@ export function SetupWizard({
   // retype it; the token is not available here and stays blank.
   const [dbUrl, setDbUrl] = useState(envDatabase.state === 'broken' ? envDatabase.url : '')
   const [dbToken, setDbToken] = useState('')
+  const [extras, setExtras] = useState<Extras>(EMPTY_EXTRAS)
 
   // Which database credentials `testConnection` has already approved, so Next
   // does not re-test unnecessarily but does re-test after an edit.
@@ -147,6 +161,14 @@ export function SetupWizard({
   }
 
   async function handleCreate() {
+    // A partial bucket config would ship variables that silently do not work, so
+    // it is the one optional thing worth blocking on.
+    if (mediaPartlyFilled(extras)) {
+      setStepError(
+        'Media storage needs the bucket name, access key ID and secret access key together — fill in all three, or clear them to skip.',
+      )
+      return
+    }
     setStepError(null)
 
     // The action runs all three stages server-side without reporting back, so the
@@ -196,7 +218,11 @@ export function SetupWizard({
         useEnvDatabase={useEnvDatabase}
         dbUrl={dbUrl.trim()}
         dbToken={dbToken.trim()}
+        extras={extras}
         envMedia={envMedia}
+        envAi={envAi}
+        host={host}
+        hostEnvUrl={hostEnvUrl}
       />
     )
   }
@@ -366,10 +392,17 @@ export function SetupWizard({
                 )}
                 <ReviewRow label="Admin email" value={email.trim()} onEdit={() => goTo('site')} />
               </dl>
-              <p className="field-hint">
-                Media storage and AI are optional — add them from <code>/setup</code> once your site
-                is up.
+
+              <p className="field-hint extras-lede">
+                Storage and AI are optional. Add them now and they ship with the same settings —
+                otherwise leave them closed and follow the docs later.
               </p>
+              <ExtrasFields
+                value={extras}
+                onChange={setExtras}
+                envMedia={envMedia}
+                envAi={envAi}
+              />
             </>
           )}
 

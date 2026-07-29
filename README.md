@@ -16,8 +16,10 @@ address**, for example `https://my-chai-site.vercel.app/setup`. Three steps:
    you will use to edit it.
 2. **Connect a database.** Free to create; the wizard links to
    [Turso](https://turso.tech) and checks the connection before moving on.
-3. **Create.** The wizard creates your database tables, your account, and your
-   site, then shows you a block of settings to copy.
+3. **Create.** Optionally add media storage and an AI key — both are collapsed,
+   and leaving them closed skips them. The wizard then creates your database
+   tables, your account, and your site, and shows you the environment variables
+   to copy.
 
 Paste those settings into Vercel under **Settings → Environment Variables**, then
 **redeploy** from the **Deployments** tab. That is it — sign in at `/admin` and
@@ -28,9 +30,11 @@ start building.
 > code, and a site only picks up new settings when it is deployed again. You
 > only ever have to do this once.
 
-Media storage and AI are optional and are not part of the wizard. After that
-first redeploy, open `/setup` again: it shows what is configured and gives you a
-form for each, generating the exact settings to paste in.
+Anything you fill in on the last step ships in that same block, so adding storage
+or AI up front costs you no extra deploy. If you skip them, adding them later is
+just more environment variables plus a deploy — you never run setup again.
+Visiting `/setup` on a configured site shows what is in place and what is
+missing.
 
 Setup disables itself once your site is configured, so `/setup` is safe to leave
 in place as a status page. To remove it entirely, delete `src/app/(setup)` and

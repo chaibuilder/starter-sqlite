@@ -795,37 +795,70 @@ code {
   font-weight: 650;
 }
 
-/* Optional media/AI forms on the status page: collapsed by default so the page
-   stays short, using <details> rather than open/close state. */
-details.card > summary {
+/* Optional storage/AI on the last step. Collapsed is the skip: <details> needs
+   no extra button and no state to keep in sync. */
+.extras-lede {
+  margin-top: 14px;
+}
+
+.extra {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  background: var(--bg);
+}
+
+.extra > summary {
   cursor: pointer;
-  font-size: 15px;
-  font-weight: 650;
+  font-size: 14px;
+  font-weight: 620;
   list-style: none;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
 }
 
-details.card > summary::-webkit-details-marker {
+.extra > summary::-webkit-details-marker {
   display: none;
 }
 
-details.card > summary::before {
+.extra > summary::before {
   content: '›';
   display: inline-block;
-  font-size: 18px;
+  font-size: 17px;
   line-height: 1;
   color: var(--muted);
   transition: transform 0.15s ease;
 }
 
-details.card[open] > summary {
-  margin-bottom: 12px;
+.extra > summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
-details.card[open] > summary::before {
+.extra[open] > summary {
+  margin-bottom: 8px;
+}
+
+.extra[open] > summary::before {
   transform: rotate(90deg);
+}
+
+.extra__tag {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Inside a collapsible the first label would otherwise double the gap the
+   summary already leaves. */
+.extra > *:last-child {
+  margin-bottom: 0;
 }
 
 /* Generated environment blocks: capped so a long one never pushes the copy

@@ -1,16 +1,19 @@
 'use client'
 
-import { useState } from 'react'
 import { envBlock, envLine } from '../lib/env-lines'
+import { hasMedia, type Extras } from './ExtrasFields'
 import { BrandHeader } from './BrandHeader'
 import { CopyButton } from './CopyButton'
 
-type Host = 'vercel' | 'netlify'
+/** Which host this deployment is running on, detected server-side. */
+export type Host = 'vercel' | 'netlify' | 'unknown'
+
+const DOCS_URL = 'https://www.chaibuilder.com/docs'
 
 /**
- * The one screen that matters after setup runs: the settings to copy, and the
- * single redeploy that applies them. Media and AI are deliberately absent —
- * they are optional, and `/setup` offers forms for them once the site is up.
+ * The one screen that matters after setup runs: the variables to copy, and the
+ * single redeploy that applies them. Instructions are written for the host we
+ * detected rather than making the user pick their own out of a list.
  */
 export function SuccessScreen({
   appId,
@@ -18,18 +21,27 @@ export function SuccessScreen({
   useEnvDatabase,
   dbUrl,
   dbToken,
+  extras,
   envMedia,
+  envAi,
+  host,
+  hostEnvUrl,
 }: {
   appId: string
   secret: string
   useEnvDatabase: boolean
   dbUrl: string
   dbToken: string
+  extras: Extras
   envMedia: boolean
+  envAi: boolean
+  host: Host
+  hostEnvUrl: string | null
 }) {
-  const [host, setHost] = useState<Host>('vercel')
-
   const siteUrl = typeof window === 'undefined' ? '' : window.location.origin
+  const mediaAdded = hasMedia(extras) && !envMedia
+  const aiAdded = Boolean(extras.aiKey.trim()) && !envAi
+
   const block = envBlock([
     // Already set on this deployment when the credentials came from the
     // environment; the auth token is not available here in any case.
@@ -42,6 +54,22 @@ export function SuccessScreen({
     envLine('PAYLOAD_SECRET', secret),
     envLine('CHAIBUILDER_APP_KEY', appId),
     envLine('NEXT_PUBLIC_SERVER_URL', siteUrl),
+    ...(mediaAdded
+      ? [
+          envLine('BUCKET_NAME', extras.bucket),
+          envLine('AWS_ACCESS_KEY_ID', extras.accessKeyId),
+          envLine('AWS_SECRET_ACCESS_KEY', extras.secretAccessKey),
+          ...(extras.s3Region.trim() ? [envLine('S3_REGION', extras.s3Region)] : []),
+          ...(extras.s3Endpoint.trim() ? [envLine('S3_ENDPOINT', extras.s3Endpoint)] : []),
+        ]
+      : []),
+    ...(aiAdded
+      ? [
+          extras.aiProvider === 'gateway'
+            ? envLine('AI_GATEWAY_API_KEY', extras.aiKey)
+            : envLine('OPENROUTER_API_KEY', extras.aiKey),
+        ]
+      : []),
   ])
 
   return (
@@ -49,15 +77,15 @@ export function SuccessScreen({
       <BrandHeader />
       <h1>Your site is ready — one last step</h1>
       <p className="lede">
-        Add these settings to your host and redeploy once. You will not have to do this again.
+        Add these environment variables to your host and redeploy once — that is the last step.
       </p>
 
       <div className="scroll-area">
         <div className="card">
-          <h2>1. Copy your settings</h2>
+          <h2>1. Copy your environment variables</h2>
           <p className="hint">
             {useEnvDatabase
-              ? 'Your database settings are already on this deployment, so they are not repeated here. '
+              ? 'DATABASE_URL is already set on this deployment, so it is not repeated here. '
               : ''}
             This is the only time the password-like values are shown.
           </p>
@@ -65,7 +93,11 @@ export function SuccessScreen({
             <code>{block}</code>
           </pre>
           <div className="actions">
-            <CopyButton value={block} label="Copy settings" copiedLabel="✓ Copied to clipboard" />
+            <CopyButton
+              value={block}
+              label="Copy env variables"
+              copiedLabel="✓ Copied to clipboard"
+            />
             <button
               type="button"
               className="secondary"
@@ -82,58 +114,56 @@ export function SuccessScreen({
                 URL.revokeObjectURL(url)
               }}
             >
-              Download .env
+              Download as file
             </button>
           </div>
         </div>
 
         <div className="card">
           <h2>2. Paste them in and redeploy — once</h2>
-          <div className="tabs" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              className="tab"
-              aria-selected={host === 'vercel'}
-              onClick={() => setHost('vercel')}
-            >
-              Vercel
-            </button>
-            <button
-              type="button"
-              role="tab"
-              className="tab"
-              aria-selected={host === 'netlify'}
-              onClick={() => setHost('netlify')}
-            >
-              Netlify
-            </button>
-          </div>
-
-          {host === 'vercel' ? (
+          {host === 'netlify' ? (
             <ol className="steps">
               <li>
-                Open <a href="https://vercel.com/dashboard">vercel.com/dashboard</a> and click this
-                project.
+                {hostEnvUrl ? (
+                  <>
+                    Open <a href={hostEnvUrl}>this site&rsquo;s environment variables</a> on Netlify.
+                  </>
+                ) : (
+                  <>
+                    In the Netlify dashboard, open this site &rarr;{' '}
+                    <strong>Site configuration</strong> &rarr;{' '}
+                    <strong>Environment variables</strong>.
+                  </>
+                )}
               </li>
               <li>
-                <strong>Settings</strong> → <strong>Environment Variables</strong> → paste the whole
-                block and save. Vercel splits it into separate variables.
+                Choose <strong>Import from a .env file</strong> and paste the whole block.
               </li>
               <li>
-                <strong>Deployments</strong> → <strong>⋯</strong> on the latest one →{' '}
-                <strong>Redeploy</strong>. Usually a minute or two.
+                <strong>Deploys</strong> &rarr; <strong>Trigger deploy</strong>. Usually a minute or
+                two.
               </li>
             </ol>
           ) : (
             <ol className="steps">
-              <li>Open your site in the Netlify dashboard.</li>
               <li>
-                <strong>Site configuration</strong> → <strong>Environment variables</strong> →{' '}
-                <strong>Import from a .env file</strong> → paste the block.
+                {hostEnvUrl ? (
+                  <>
+                    Open <a href={hostEnvUrl}>this project&rsquo;s environment variables</a> on
+                    Vercel.
+                  </>
+                ) : (
+                  <>
+                    Open <a href="https://vercel.com/dashboard">vercel.com/dashboard</a>, click this
+                    project, then <strong>Settings</strong> &rarr;{' '}
+                    <strong>Environment Variables</strong>.
+                  </>
+                )}
               </li>
+              <li>Paste the whole block and save. Vercel splits it into separate variables.</li>
               <li>
-                <strong>Deploys</strong> → <strong>Trigger deploy</strong>. Usually a minute or two.
+                <strong>Deployments</strong> &rarr; <strong>⋯</strong> on the latest one &rarr;{' '}
+                <strong>Redeploy</strong>. Usually a minute or two.
               </li>
             </ol>
           )}
@@ -144,14 +174,14 @@ export function SuccessScreen({
         </div>
 
         <p className="hint">
-          {!envMedia && (
+          {!mediaAdded && !envMedia && (
             <>
-              Media storage and AI are optional — open <code>/setup</code> again after redeploying
-              to add them.{' '}
+              You skipped media storage, so uploaded images will not survive a redeploy —{' '}
+              <a href={DOCS_URL}>the docs</a> cover adding it later.{' '}
             </>
           )}
-          Setup disables itself once configured, so it is safe to leave in place; to remove it,
-          delete <code>src/app/(setup)</code>.
+          Setup disables itself once configured: safe to leave, or delete{' '}
+          <code>src/app/(setup)</code> to remove it.
         </p>
       </div>
     </div>

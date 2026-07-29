@@ -2,15 +2,55 @@
 
 A website builder you host yourself, built with Next.js and Payload CMS.
 
-## Deploy your site.
+## Getting started
+
+Two ways in. Both ask the same questions and end at the same place — an admin
+account, a database, and a site you can edit at `/admin`.
+
+| | Best for |
+| --- | --- |
+| [**1. The CLI**](#1-the-cli) | Starting a brand new project on your own machine. |
+| [**2. Clone and run `/setup`**](#2-clone-and-run-setup) | Working from this repository, or a site already deployed to a host. |
+
+### 1. The CLI
+
+```bash
+npx chaibuilder-app create
+```
+
+The CLI walks you through naming the site, creating your login, and connecting a
+database, then scaffolds the project and writes a `.env` with everything filled
+in. When it finishes:
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Sign in at `http://localhost:3000/admin` and start building.
+
+### 2. Clone and run `/setup`
+
+Use this when you already have the code — either cloned locally, or deployed to
+a host. Running it locally:
+
+```bash
+git clone https://github.com/chaibuilder/chaibuilder-starter.git my-chai-site
+cd my-chai-site
+pnpm install
+pnpm dev
+```
+
+Then open **`http://localhost:3000/setup`** and follow the wizard. Deploying
+first instead? Click below, then open `/setup` on the deployed address, for
+example `https://my-chai-site.vercel.app/setup`.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fchaibuilder%2Fchaibuilder-starter&project-name=my-chai-site&repository-name=my-chai-site)
 
-Click the button above. Vercel copies this project to your own GitHub account and
-puts it online — you do not need to fill in any settings yet.
+Vercel copies this project to your own GitHub account and puts it online — you do
+not need to fill in any settings before running `/setup`.
 
-When the deployment finishes, **open your new site and add `/setup` to the
-address**, for example `https://my-chai-site.vercel.app/setup`. Three steps:
+**The wizard is three steps:**
 
 1. **Your site and login.** The site name, plus the email address and password
    you will use to edit it.
@@ -21,7 +61,8 @@ address**, for example `https://my-chai-site.vercel.app/setup`. Three steps:
    tables, your account, and your site, and shows you the environment variables
    to copy.
 
-Paste those settings into Vercel under **Settings → Environment Variables**, then
+**Then save the settings it prints.** Locally, paste them into `.env` and restart
+`pnpm dev`. On Vercel, paste them under **Settings → Environment Variables** and
 **redeploy** from the **Deployments** tab. That is it — sign in at `/admin` and
 start building.
 
@@ -44,15 +85,17 @@ two places.
 Nothing you type into the wizard is stored on the server. It runs on your own
 deployment, talks to your own database, and hands the values back to you.
 
-### Deploying somewhere else
+#### Deploying somewhere else
 
 Any host that runs Next.js works — the process is the same. On Netlify, the
 settings screen is **Site configuration → Environment variables → Import from a
 .env file**, then redeploy.
 
+Requires Node.js 20.9+ and pnpm 9+.
+
 ## Environment variables
 
-`/setup` generates these for you, but you can also set them by hand. See
+The CLI and `/setup` generate these for you, but you can also set them by hand. See
 [`.env.example`](./.env.example) for the full list with comments.
 
 | Variable | Required | What it is |
@@ -70,16 +113,10 @@ settings screen is **Site configuration → Environment variables → Import fro
 Visit `/setup` on a configured site at any time to see which of these are in
 place and which are still missing.
 
-## Local development
+## Configuring by hand
 
-The quickest way to start a new project locally is the CLI, which does the same
-setup work as the wizard and writes a `.env` for you:
-
-```bash
-npx chaibuilder-app create
-```
-
-To run this repository directly:
+If you would rather not use either wizard, copy the example file and fill it in
+yourself:
 
 ```bash
 cp .env.example .env      # then fill in DATABASE_URL and PAYLOAD_SECRET
@@ -87,10 +124,8 @@ pnpm install
 pnpm dev
 ```
 
-Open `http://localhost:3000/setup` to create your account and site, then add the
-printed `CHAIBUILDER_APP_KEY` to your `.env` and restart.
-
-Requires Node.js 20.9+ and pnpm 9+.
+You still need a `CHAIBUILDER_APP_KEY` for a site record in the database;
+`/setup` prints one when it creates the site.
 
 ## Media storage
 
@@ -130,4 +165,3 @@ pnpm payload migrate:create    # create one after changing a collection
 ## Documentation
 
 Full documentation is at [chaibuilder.com/docs](https://www.chaibuilder.com/docs).
-# my-new-site

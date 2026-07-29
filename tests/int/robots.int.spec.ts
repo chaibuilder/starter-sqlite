@@ -23,6 +23,13 @@ describe('robots.txt builder', () => {
     )
   })
 
+  // The setup wizard takes database credentials and reports on the site's
+  // configuration; it also sends `noindex`, but a crawler that never fetches it
+  // never sees that header.
+  it('keeps crawlers away from /setup', () => {
+    expect(ROBOTS_DISALLOW_PATHS).toContain('/setup')
+  })
+
   it('allows public site root', () => {
     const robots = buildRobots()
     const rules = Array.isArray(robots.rules) ? robots.rules[0] : robots.rules

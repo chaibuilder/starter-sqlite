@@ -96,6 +96,9 @@ export async function getSetupStatus(): Promise<SetupStatus> {
         appId = only?.id == null ? null : String(only.id)
         appName = only?.name == null ? null : String(only.name)
 
+        // Deliberately no ids in the text: this page is reachable by anyone who
+        // can reach the site, so it reports what is wrong without ever printing
+        // a value the reader could not already have.
         checks.push({
           id: 'app',
           label: 'Your site',
@@ -105,9 +108,7 @@ export async function getSetupStatus(): Promise<SetupStatus> {
               ? 'No site found in the database. Re-run setup to create one.'
               : !envAppKey
                 ? 'CHAIBUILDER_APP_KEY is not set, so there is no way to tell which site this deployment serves.'
-                : only
-                  ? `CHAIBUILDER_APP_KEY does not match the site in this database. Set it to ${String(only.id)}.`
-                  : 'CHAIBUILDER_APP_KEY does not match any site in this database. Check that you copied the value setup gave you.',
+                : 'CHAIBUILDER_APP_KEY does not match a site in this database. Check that you copied the whole value setup gave you, or re-run setup to create a new site.',
         })
       }
 

@@ -322,6 +322,18 @@ button.link:hover:not(:disabled) {
   margin-top: 20px;
 }
 
+/* Three actions side by side overrun the 700px column by a few pixels at the
+   default button padding, and wrapping one onto its own row reads as an
+   afterthought rather than a third choice. */
+.actions--tight {
+  gap: 10px;
+}
+
+.actions--tight button {
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
 .note {
   border-radius: 10px;
   padding: 12px 16px;

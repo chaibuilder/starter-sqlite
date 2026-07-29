@@ -95,6 +95,12 @@ export function SetupWizard({
   const running = progress !== 'idle' && progress !== 'done'
   const dbKey = JSON.stringify([dbUrl.trim(), dbToken.trim()])
 
+  // The same wizard serves a deployment and a checkout on the user's own
+  // machine. Only the last step really differs — a `.env` file and a restart
+  // instead of a dashboard and a redeploy — but the promise made up front has to
+  // match it, so the wording follows the host from the first screen.
+  const isLocal = host === 'local'
+
   // Working credentials on the deployment mean there is nothing to ask for. The
   // step stays in the rail, ticked, so it is clear it was handled rather than
   // silently dropped — but it is not one of the steps the wizard walks through.
@@ -232,7 +238,11 @@ export function SetupWizard({
     <div className="wrap">
       <BrandHeader />
       <h1>Set up your ChaiBuilder site</h1>
-      <p className="lede">Three steps, then one redeploy — and your site is live.</p>
+      <p className="lede">
+        {isLocal
+          ? 'Three steps, then one restart — and your site is running.'
+          : 'Three steps, then one redeploy — and your site is live.'}
+      </p>
 
       <ol className="stepper">
         {ALL_STEPS.map((entry) => {
@@ -330,7 +340,8 @@ export function SetupWizard({
               <aside className="cli-aside">
                 <strong>Prefer the command line?</strong>{' '}
                 <span className="hint-inline">
-                  This does the same setup locally and writes a <code>.env</code> for you.
+                  This does the same setup{isLocal ? '' : ' locally'} and writes a <code>.env</code>{' '}
+                  for you.
                 </span>
                 <div className="cli-command">
                   <code>{CLI_COMMAND}</code>
@@ -348,12 +359,21 @@ export function SetupWizard({
                   {envDatabase.error} Enter them again below.
                 </div>
               )}
-              <p className="hint">
-                Your pages and content live in a hosted libSQL database — a free one from{' '}
-                <NewTabLink href="https://turso.tech">Turso</NewTabLink> works well. Create it, then
-                copy its{' '}
-                <code>libsql://</code> address here.
-              </p>
+              {isLocal ? (
+                <p className="hint">
+                  Your pages and content live in a libSQL database. On your own machine a file in
+                  the project is enough — use <code>file:./payload.db</code> and it is created for
+                  you. To point at a hosted database instead, paste its <code>libsql://</code>{' '}
+                  address; a free one from <NewTabLink href="https://turso.tech">Turso</NewTabLink>{' '}
+                  works well.
+                </p>
+              ) : (
+                <p className="hint">
+                  Your pages and content live in a hosted libSQL database — a free one from{' '}
+                  <NewTabLink href="https://turso.tech">Turso</NewTabLink> works well. Create it,
+                  then copy its <code>libsql://</code> address here.
+                </p>
+              )}
 
               <label htmlFor="dbUrl">Database URL</label>
               <input
@@ -361,12 +381,14 @@ export function SetupWizard({
                 type="text"
                 value={dbUrl}
                 onChange={(e) => setDbUrl(e.target.value)}
-                placeholder="libsql://your-database.turso.io"
+                placeholder={isLocal ? 'file:./payload.db' : 'libsql://your-database.turso.io'}
               />
 
               <label htmlFor="dbToken">Database token</label>
               <div className="field-hint">
-                Your provider issues one alongside the URL and will refuse the connection without it.
+                {isLocal
+                  ? 'Only for hosted databases — leave this empty when the URL is a file.'
+                  : 'Your provider issues one alongside the URL and will refuse the connection without it.'}
               </div>
               <input
                 id="dbToken"

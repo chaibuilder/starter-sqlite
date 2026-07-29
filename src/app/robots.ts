@@ -2,9 +2,16 @@ import type { MetadataRoute } from 'next'
 import { adminUrl } from '@/utilities/adminRoute'
 import { getServerSideURL } from '@/utilities/getURL'
 
-/** Paths that must not be crawled (prefix match). Keep in sync with app route groups. */
+/**
+ * Paths that must not be crawled (prefix match). Keep in sync with app route
+ * groups.
+ *
+ * `/setup` also sends `noindex` in its own metadata; it is listed here as well
+ * because a crawler that never fetches the page never sees that tag, and the
+ * page names the site's own environment variables.
+ */
 export function getRobotsDisallowPaths(): readonly string[] {
-  return [`${adminUrl()}/`, '/api/', '/next/']
+  return [`${adminUrl()}/`, '/api/', '/next/', '/setup']
 }
 
 /** @deprecated Use getRobotsDisallowPaths() for dynamic admin route support. */

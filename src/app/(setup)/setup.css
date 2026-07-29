@@ -329,7 +329,8 @@ button.link:hover:not(:disabled) {
   gap: 10px;
 }
 
-.actions--tight button {
+.actions--tight button,
+.actions--tight .button-link {
   padding-left: 14px;
   padding-right: 14px;
 }

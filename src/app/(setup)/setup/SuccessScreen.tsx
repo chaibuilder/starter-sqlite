@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { envBlock, envLine } from '../lib/env-lines'
 import { hasMedia, type Extras } from './ExtrasFields'
 import { BrandHeader } from './BrandHeader'
+import { copyText } from './copy-text'
 import { CopyButton } from './CopyButton'
 import { NewTabLink } from './NewTabLink'
 
@@ -100,12 +101,16 @@ export function SuccessScreen({
     URL.revokeObjectURL(url)
   }
 
-  /** The action this screen actually wants: take the variables, go paste them. */
-  function copyAndGo() {
-    // Opened before the clipboard write is awaited — once a promise has
-    // resolved this is no longer inside the click, and popup blockers say no.
-    window.open(hostEnvUrl!, '_blank', 'noopener,noreferrer')
-    void navigator.clipboard.writeText(block).then(() => setSent(true))
+  /**
+   * The action this screen actually wants: take the variables, go paste them.
+   *
+   * The copy runs to completion here, before the browser follows the link — a
+   * real anchor rather than `window.open`, so nothing is popup-blocked and
+   * nothing races the new tab for focus.
+   */
+  function copyThenFollow() {
+    copyText(block)
+    setSent(true)
   }
 
   return (
@@ -130,9 +135,15 @@ export function SuccessScreen({
           </pre>
           <div className="actions actions--tight">
             {hostEnvUrl && (
-              <button type="button" onClick={copyAndGo}>
-                {sent ? '✓ Copied — opening…' : `Copy and go to ${hostNoun}`}
-              </button>
+              <a
+                className="button-link"
+                href={hostEnvUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={copyThenFollow}
+              >
+                {sent ? '✓ Copied — opened' : `Copy and go to ${hostNoun}`}
+              </a>
             )}
             <button type="button" className="secondary" onClick={download}>
               Download .env

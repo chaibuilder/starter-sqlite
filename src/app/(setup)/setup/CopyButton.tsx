@@ -1,10 +1,15 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { copyText } from './copy-text'
 
 /**
  * Copy-to-clipboard button with a short-lived confirmation. Used by the wizard,
  * the success screen and the optional media/AI forms.
+ *
+ * Copying is synchronous — see `copy-text` — so the confirmation reflects work
+ * that has already happened rather than a promise that may still be waiting on
+ * a permission prompt.
  */
 export function CopyButton({
   value,
@@ -32,11 +37,10 @@ export function CopyButton({
       className={className}
       disabled={disabled}
       onClick={() => {
-        void navigator.clipboard.writeText(value).then(() => {
-          setCopied(true)
-          if (timer.current) clearTimeout(timer.current)
-          timer.current = setTimeout(() => setCopied(false), 2500)
-        })
+        copyText(value)
+        setCopied(true)
+        if (timer.current) clearTimeout(timer.current)
+        timer.current = setTimeout(() => setCopied(false), 2500)
       }}
     >
       {copied ? copiedLabel : label}

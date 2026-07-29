@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { envBlock, envLine } from '../lib/env-lines'
 import { hasMedia, type Extras } from './ExtrasFields'
 import { BrandHeader } from './BrandHeader'
@@ -10,6 +11,15 @@ import { NewTabLink } from './NewTabLink'
 export type Host = 'vercel' | 'netlify' | 'unknown'
 
 const DOCS_URL = 'https://www.chaibuilder.com/docs'
+
+/**
+ * Browsers refuse to save a file called `.env`: a leading dot marks a hidden
+ * file, so it is stripped, and a `text/plain` blob then picks up `.txt` on the
+ * way out — which is how the download arrived as `env.txt`. A real basename
+ * survives intact, and `application/octet-stream` stops the extension being
+ * second-guessed.
+ */
+const DOWNLOAD_NAME = 'chaibuilder.env'
 
 /**
  * The one screen that matters after setup runs: the variables to copy, and the
@@ -39,6 +49,8 @@ export function SuccessScreen({
   host: Host
   hostEnvUrl: string | null
 }) {
+  const [sent, setSent] = useState(false)
+
   const siteUrl = typeof window === 'undefined' ? '' : window.location.origin
   const mediaAdded = hasMedia(extras) && !envMedia
   const aiAdded = Boolean(extras.aiKey.trim()) && !envAi
@@ -73,6 +85,29 @@ export function SuccessScreen({
       : []),
   ])
 
+  // Vercel calls it a project, Netlify calls it a site; say whichever the user
+  // is about to be looking at.
+  const hostNoun = host === 'netlify' ? 'site' : 'project'
+
+  function download() {
+    const url = URL.createObjectURL(new Blob([block], { type: 'application/octet-stream' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = DOWNLOAD_NAME
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  /** The action this screen actually wants: take the variables, go paste them. */
+  function copyAndGo() {
+    // Opened before the clipboard write is awaited — once a promise has
+    // resolved this is no longer inside the click, and popup blockers say no.
+    window.open(hostEnvUrl!, '_blank', 'noopener,noreferrer')
+    void navigator.clipboard.writeText(block).then(() => setSent(true))
+  }
+
   return (
     <div className="wrap">
       <BrandHeader />
@@ -93,30 +128,21 @@ export function SuccessScreen({
           <pre className="env-block">
             <code>{block}</code>
           </pre>
-          <div className="actions">
+          <div className="actions actions--tight">
+            {hostEnvUrl && (
+              <button type="button" onClick={copyAndGo}>
+                {sent ? '✓ Copied — opening…' : `Copy and go to ${hostNoun}`}
+              </button>
+            )}
+            <button type="button" className="secondary" onClick={download}>
+              Download .env
+            </button>
             <CopyButton
               value={block}
-              label="Copy env variables"
-              copiedLabel="✓ Copied to clipboard"
+              className={hostEnvUrl ? 'secondary' : undefined}
+              label="Copy env vars"
+              copiedLabel="✓ Copied"
             />
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => {
-                const url = URL.createObjectURL(
-                  new Blob([block], { type: 'text/plain;charset=utf-8' }),
-                )
-                const a = document.createElement('a')
-                a.href = url
-                a.download = '.env'
-                document.body.appendChild(a)
-                a.click()
-                document.body.removeChild(a)
-                URL.revokeObjectURL(url)
-              }}
-            >
-              Download as file
-            </button>
           </div>
         </div>
 
@@ -127,9 +153,9 @@ export function SuccessScreen({
               <li>
                 {hostEnvUrl ? (
                   <>
-                    Open{' '}
+                    The button above opens{' '}
                     <NewTabLink href={hostEnvUrl}>this site&rsquo;s environment variables</NewTabLink>{' '}
-                    on Netlify.
+                    in a new tab.
                   </>
                 ) : (
                   <>
@@ -152,11 +178,11 @@ export function SuccessScreen({
               <li>
                 {hostEnvUrl ? (
                   <>
-                    Open{' '}
+                    The button above opens{' '}
                     <NewTabLink href={hostEnvUrl}>
                       this project&rsquo;s environment variables
                     </NewTabLink>{' '}
-                    on Vercel.
+                    in a new tab.
                   </>
                 ) : (
                   <>

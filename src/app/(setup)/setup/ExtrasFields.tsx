@@ -2,6 +2,17 @@
 
 import { NewTabLink } from './NewTabLink'
 
+/**
+ * Where each provider's keys are made. Vercel's is the documented API-keys page
+ * rather than a dashboard deep link: the dashboard path is built from the team
+ * slug, which nothing here knows, and this page names the same
+ * `AI_GATEWAY_API_KEY` the block below emits.
+ */
+const AI_KEY_URLS = {
+  gateway: 'https://vercel.com/docs/ai-gateway/authentication-and-byok/api-keys',
+  openrouter: 'https://openrouter.ai/keys',
+} as const
+
 /** The only two AI providers setup offers. Both need a single key, nothing else. */
 export type AiProvider = 'gateway' | 'openrouter'
 
@@ -147,8 +158,10 @@ export function ExtrasFields({
                   onChange={() => set('aiProvider', 'gateway')}
                 />
                 <span>
-                  <strong>Vercel AI Gateway</strong> — create a key under AI Gateway in your Vercel
-                  dashboard.
+                  <strong>
+                    <NewTabLink href={AI_KEY_URLS.gateway}>Vercel AI Gateway</NewTabLink>
+                  </strong>{' '}
+                  — create a key in your Vercel dashboard.
                 </span>
               </label>
               <label>
@@ -160,7 +173,7 @@ export function ExtrasFields({
                 />
                 <span>
                   <strong>
-                    <NewTabLink href="https://openrouter.ai">OpenRouter</NewTabLink>
+                    <NewTabLink href={AI_KEY_URLS.openrouter}>OpenRouter</NewTabLink>
                   </strong>{' '}
                   — create a key at openrouter.ai.
                 </span>

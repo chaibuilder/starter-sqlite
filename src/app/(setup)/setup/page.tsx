@@ -1,3 +1,4 @@
+import { headers } from 'next/headers'
 import { adminUrl } from '@/utilities/adminRoute'
 import { isConfigured } from '@/lib/is-configured'
 import { envDbCredentials, openDb, redactDbUrl } from '../lib/db'
@@ -63,8 +64,12 @@ function hasEnvAi(): boolean {
 }
 
 export default async function SetupPage() {
+  // The `Host` header is what separates a production build served over loopback
+  // — someone running `next start` or the compose stack on their own machine —
+  // from a self-hosted deployment on a real domain.
+  const host = detectHost((await headers()).get('host'))
+
   if (!isConfigured()) {
-    const host = detectHost()
     return (
       <SetupWizard
         envDatabase={await probeEnvDatabase()}
@@ -116,8 +121,9 @@ export default async function SetupPage() {
           <div className="card">
             <h2>Optional extras</h2>
             <p className="hint">
-              Each of these is a matter of adding environment variables to your host and deploying
-              again — there is no need to run setup a second time.{' '}
+              {host === 'local'
+                ? 'Each of these is a matter of adding environment variables to your .env file and restarting — there is no need to run setup a second time. '
+                : 'Each of these is a matter of adding environment variables to your host and deploying again — there is no need to run setup a second time. '}
               <NewTabLink href={DOCS_URL}>The docs</NewTabLink> walk through each one.
             </p>
             <ul className="steps">
@@ -147,11 +153,10 @@ export default async function SetupPage() {
 
         <div className="card">
           <h2>Your site</h2>
-          {status.appId && (
-            <p className="hint">
-              Site ID: <code>{status.appId}</code>
-            </p>
-          )}
+          {/* No ids, keys or values here on purpose: once setup has run this page
+              is reachable by anyone who can reach the site, so it says what is
+              working without repeating anything worth keeping secret. The values
+              live in your host's settings and, for the site id, the editor. */}
           <div className="actions">
             {/* Styled links rather than buttons wrapped in anchors, which is
                 invalid HTML and confuses keyboard and assistive-tech users. */}
@@ -164,11 +169,27 @@ export default async function SetupPage() {
           </div>
         </div>
 
-        <p className="hint">
-          Setup disables itself once configured, so it is safe to leave in place. To remove it,
-          delete <code>src/app/(setup)</code> and the <code>/setup</code> redirect in{' '}
-          <code>src/proxy.ts</code>.
-        </p>
+        <div className="card">
+          <h2>You can delete this route now</h2>
+          <p className="hint">
+            Setup has done its job. It refuses to run again while the site is configured, so it is
+            safe to leave in place — but nothing here is needed any more, and deleting it removes
+            the page entirely.
+          </p>
+          <ol className="steps">
+            <li>
+              Delete <code>src/app/(setup)</code>.
+            </li>
+            <li>
+              Remove the <code>/setup</code> redirect from <code>src/proxy.ts</code>.
+            </li>
+            <li>
+              {host === 'local'
+                ? 'Restart the dev server.'
+                : 'Commit and deploy — the route is gone from the next build onwards.'}
+            </li>
+          </ol>
+        </div>
       </div>
     </div>
   )

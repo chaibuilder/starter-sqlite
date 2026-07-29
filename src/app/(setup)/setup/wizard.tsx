@@ -95,6 +95,12 @@ export function SetupWizard({
   const running = progress !== 'idle' && progress !== 'done'
   const dbKey = dbUrl.trim()
 
+  // The same wizard serves a deployment and a checkout on the user's own
+  // machine. Only the last step really differs — a `.env` file and a restart
+  // instead of a dashboard and a redeploy — but the promise made up front has to
+  // match it, so the wording follows the host from the first screen.
+  const isLocal = host === 'local'
+
   // Working credentials on the deployment mean there is nothing to ask for. The
   // step stays in the rail, ticked, so it is clear it was handled rather than
   // silently dropped — but it is not one of the steps the wizard walks through.
@@ -231,7 +237,11 @@ export function SetupWizard({
     <div className="wrap">
       <BrandHeader />
       <h1>Set up your ChaiBuilder site</h1>
-      <p className="lede">Three steps, then one redeploy — and your site is live.</p>
+      <p className="lede">
+        {isLocal
+          ? 'Three steps, then one restart — and your site is running.'
+          : 'Three steps, then one redeploy — and your site is live.'}
+      </p>
 
       <ol className="stepper">
         {ALL_STEPS.map((entry) => {
@@ -329,7 +339,8 @@ export function SetupWizard({
               <aside className="cli-aside">
                 <strong>Prefer the command line?</strong>{' '}
                 <span className="hint-inline">
-                  This does the same setup locally and writes a <code>.env</code> for you.
+                  This does the same setup{isLocal ? '' : ' locally'} and writes a <code>.env</code>{' '}
+                  for you.
                 </span>
                 <div className="cli-command">
                   <code>{CLI_COMMAND}</code>
@@ -347,28 +358,54 @@ export function SetupWizard({
                   {envDatabase.error} Enter them again below.
                 </div>
               )}
-              <p className="hint">
-                Your pages and content live in a PostgreSQL database. Any provider works —{' '}
-                <NewTabLink href="https://neon.com">Neon</NewTabLink>,{' '}
-                <NewTabLink href="https://supabase.com">Supabase</NewTabLink>,{' '}
-                <NewTabLink href="https://vercel.com/marketplace/category/storage">
-                  Vercel Postgres
-                </NewTabLink>{' '}
-                and others have a free tier — or your own server. Create the database, then copy its{' '}
-                <code>postgres://</code> connection string here.
-              </p>
+              {isLocal ? (
+                <p className="hint">
+                  Your pages and content live in a PostgreSQL database. Postgres has no file mode,
+                  so this needs a server running — <code>docker compose up -d postgres</code> in the
+                  project starts one that matches the address below, with the PostGIS extension the
+                  schema needs. Any other local server works too, as does a hosted one.
+                </p>
+              ) : (
+                <p className="hint">
+                  Your pages and content live in a PostgreSQL database. Any provider works —{' '}
+                  <NewTabLink href="https://neon.com">Neon</NewTabLink>,{' '}
+                  <NewTabLink href="https://supabase.com">Supabase</NewTabLink>,{' '}
+                  <NewTabLink href="https://vercel.com/marketplace/category/storage">
+                    Vercel Postgres
+                  </NewTabLink>{' '}
+                  and others have a free tier — or your own server. Create the database, then copy
+                  its <code>postgres://</code> connection string here.
+                </p>
+              )}
 
               <label htmlFor="dbUrl">Database connection string</label>
               <div className="field-hint">
-                This contains the database password, so treat it like one. Hosted databases need TLS:
-                keep the <code>?sslmode=require</code> your provider puts on the end.
+                {isLocal ? (
+                  <>
+                    A local server is reached in the clear, so there is no <code>sslmode</code> to
+                    add — put one back if you point this at a hosted database instead.
+                  </>
+                ) : (
+                  <>
+                    This contains the database password, so treat it like one. Hosted databases need
+                    TLS: keep the <code>?sslmode=require</code> your provider puts on the end.
+                  </>
+                )}
               </div>
+              {/* Masked off the local machine, where the string carries a live
+                  password and the screen may well be shared. The local default is
+                  a throwaway credential on loopback, and hiding a URL this long
+                  while it is typed costs more than it protects. */}
               <input
                 id="dbUrl"
-                type="password"
+                type={isLocal ? 'text' : 'password'}
                 value={dbUrl}
                 onChange={(e) => setDbUrl(e.target.value)}
-                placeholder="postgres://user:password@host:5432/database?sslmode=require"
+                placeholder={
+                  isLocal
+                    ? 'postgres://postgres:postgres@localhost:5432/chaibuilder'
+                    : 'postgres://user:password@host:5432/database?sslmode=require'
+                }
               />
               <p className="field-hint">We check the connection before moving on.</p>
             </>

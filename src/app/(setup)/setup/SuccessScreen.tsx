@@ -9,7 +9,7 @@ import { CopyButton } from './CopyButton'
 import { NewTabLink } from './NewTabLink'
 
 /** Which host this deployment is running on, detected server-side. */
-export type Host = 'vercel' | 'netlify' | 'unknown'
+export type Host = 'vercel' | 'netlify' | 'local' | 'unknown'
 
 const DOCS_URL = 'https://www.chaibuilder.com/docs'
 
@@ -50,6 +50,10 @@ export function SuccessScreen({
 }) {
   const [sent, setSent] = useState(false)
 
+  // Running on the user's own machine there is no dashboard and no deploy: the
+  // same variables go into the `.env` file next to the code, and the dev server
+  // picks them up on restart.
+  const isLocal = host === 'local'
   const siteUrl = typeof window === 'undefined' ? '' : window.location.origin
   const mediaAdded = hasMedia(extras) && !envMedia
   const aiAdded = Boolean(extras.aiKey.trim()) && !envAi
@@ -111,7 +115,9 @@ export function SuccessScreen({
       <BrandHeader />
       <h1>Your site is ready — one last step</h1>
       <p className="lede">
-        Add these environment variables to your host and redeploy once — that is the last step.
+        {isLocal
+          ? 'Add these environment variables to your .env file and restart the dev server — that is the last step.'
+          : 'Add these environment variables to your host and redeploy once — that is the last step.'}
       </p>
 
       <div className="scroll-area">
@@ -119,7 +125,7 @@ export function SuccessScreen({
           <h2>1. Copy your environment variables</h2>
           <p className="hint">
             {useEnvDatabase
-              ? 'DATABASE_URL is already set on this deployment, so it is not repeated here. '
+              ? `DATABASE_URL is already set ${isLocal ? 'in your environment' : 'on this deployment'}, so it is not repeated here. `
               : ''}
             This is the only time the password-like values are shown.
           </p>
@@ -151,8 +157,28 @@ export function SuccessScreen({
         </div>
 
         <div className="card">
-          <h2>2. Paste them in and redeploy — once</h2>
-          {host === 'netlify' ? (
+          <h2>
+            {isLocal
+              ? '2. Paste them into .env and restart'
+              : '2. Paste them in and redeploy — once'}
+          </h2>
+          {isLocal ? (
+            <ol className="steps">
+              <li>
+                Open <code>.env</code> in the root of your project — create it if it is not there
+                yet. It is already in <code>.gitignore</code>, so these values stay off GitHub.
+              </li>
+              <li>
+                Paste the whole block in and save. Replace any of these keys that are already in the
+                file rather than adding a second copy — the last one set wins, and a stale{' '}
+                <code>CHAIBUILDER_APP_KEY</code> points at a site that is not the one just created.
+              </li>
+              <li>
+                Restart the dev server: stop it with <code>Ctrl+C</code> and run{' '}
+                <code>pnpm dev</code> again.
+              </li>
+            </ol>
+          ) : host === 'netlify' ? (
             <ol className="steps">
               <li>
                 {hostEnvUrl ? (
@@ -205,18 +231,26 @@ export function SuccessScreen({
             </ol>
           )}
           <p>
-            When it finishes, sign in at <code>/admin</code> with the email and password you just
-            chose.
+            {isLocal ? 'Once it is back up' : 'When it finishes'}, sign in at <code>/admin</code>{' '}
+            with the email and password you just chose.
           </p>
         </div>
 
         <p className="hint">
-          {!mediaAdded && !envMedia && (
-            <>
-              You skipped media storage, so uploaded images will not survive a redeploy —{' '}
-              <NewTabLink href={DOCS_URL}>the docs</NewTabLink> cover adding it later.{' '}
-            </>
-          )}
+          {!mediaAdded &&
+            !envMedia &&
+            (isLocal ? (
+              <>
+                You skipped media storage, so uploads are written to local disk — fine while you are
+                developing, but add a bucket before you deploy.{' '}
+                <NewTabLink href={DOCS_URL}>The docs</NewTabLink> cover it.{' '}
+              </>
+            ) : (
+              <>
+                You skipped media storage, so uploaded images will not survive a redeploy —{' '}
+                <NewTabLink href={DOCS_URL}>the docs</NewTabLink> cover adding it later.{' '}
+              </>
+            ))}
           Setup disables itself once configured: safe to leave, or delete{' '}
           <code>src/app/(setup)</code> to remove it.
         </p>

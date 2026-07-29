@@ -56,6 +56,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // No database to list pages from until setup has been completed.
   if (!isConfigured()) return []
 
+  // Entries gathered so far, kept outside the try so a failure part-way through
+  // still returns the pages that were already listed.
+  const staticEntries: MetadataRoute.Sitemap = []
+
+  try {
+    return await collectSitemap(staticEntries)
+  } catch (error) {
+    // This route is prerendered, so throwing here fails the whole build — and a
+    // sitemap is never worth a failed deploy. The environment can be configured
+    // while the database is not yet reachable: tables not migrated, a sleeping
+    // Turso instance, credentials that changed. Ship what we have; `revalidate`
+    // picks the rest up within the hour once the database answers again.
+    console.warn(
+      '[sitemap] Could not list pages, so the sitemap is incomplete. This is usually a database that is unreachable or has not been migrated — visit /setup to check.',
+      error,
+    )
+    return mergeSitemapEntries([staticEntries])
+  }
+}
+
+/** The real work, split out so the caller above owns the failure handling. */
+async function collectSitemap(
+  staticEntries: MetadataRoute.Sitemap,
+): Promise<MetadataRoute.Sitemap> {
   const localConfig = await chaiConfig
   const payloadCfg = await payloadConfig
   const cb = await getChaiBuilder()
@@ -64,12 +88,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     fields: ['slug', 'updatedAt', 'dynamic', 'lang'],
   })
 
-  const staticEntries: MetadataRoute.Sitemap = pages
-    .filter((page: any) => page.dynamic === false && page.slug?.trim())
-    .map((page: any) => ({
-      url: toAbsoluteUrl(page.slug),
-      lastModified: page.updatedAt ? new Date(page.updatedAt) : undefined,
-    }))
+  staticEntries.push(
+    ...pages
+      .filter((page: any) => page.dynamic === false && page.slug?.trim())
+      .map((page: any) => ({
+        url: toAbsoluteUrl(page.slug),
+        lastModified: page.updatedAt ? new Date(page.updatedAt) : undefined,
+      })),
+  )
 
   const pageTypeKeys = new Set((localConfig.pageTypes ?? []).map((pt: any) => pt.key))
 

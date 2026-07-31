@@ -3,12 +3,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { runSetup, testConnection } from './actions'
 import { BrandHeader } from './BrandHeader'
-import { CopyButton } from './CopyButton'
 import {
-  EMPTY_EXTRAS,
-  ExtrasFields,
-  mediaPartlyFilled,
-  type Extras,
+    EMPTY_EXTRAS,
+    ExtrasFields,
+    mediaPartlyFilled,
+    type Extras,
 } from './ExtrasFields'
 import { NewTabLink } from './NewTabLink'
 import { SuccessScreen, type Host } from './SuccessScreen'
@@ -336,18 +335,6 @@ export function SetupWizard({
                   {showPassword ? 'Hide' : 'Show'}
                 </button>
               </div>
-
-              <aside className="cli-aside">
-                <strong>Prefer the command line?</strong>{' '}
-                <span className="hint-inline">
-                  This does the same setup{isLocal ? '' : ' locally'} and writes a <code>.env</code>{' '}
-                  for you.
-                </span>
-                <div className="cli-command">
-                  <code>{CLI_COMMAND}</code>
-                  <CopyButton value={CLI_COMMAND} className="link" copiedLabel="Copied" />
-                </div>
-              </aside>
             </>
           )}
 

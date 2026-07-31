@@ -1,6 +1,6 @@
-import { randomUUID } from 'node:crypto'
-import { DEFAULT_APP_THEME, DEFAULT_BLOCKS, getDefaultHomeSeo } from './defaults'
-import type { PgDbClient } from './db'
+import { randomUUID } from 'node:crypto';
+import type { PgDbClient } from './db';
+import { DEFAULT_APP_THEME, DEFAULT_BLOCKS, getDefaultHomeSeo } from './defaults';
 
 /**
  * Insert a new app: `apps`, `apps_online`, `app_users`, and a default homepage
@@ -44,12 +44,12 @@ export async function createAppRecord(
   const homeSeo = JSON.stringify(getDefaultHomeSeo(appName))
   const blocks = JSON.stringify(DEFAULT_BLOCKS)
   await client.execute({
-    sql: `INSERT INTO app_pages (id, app, slug, name, "pageType", seo, blocks) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    args: [pageId, appId, '/', 'Home', 'page', homeSeo, blocks],
+    sql: `INSERT INTO app_pages (id, app, slug, name, "pageType", seo, blocks, online) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    args: [pageId, appId, '/', 'Home', 'page', homeSeo, blocks, true],
   })
   await client.execute({
-    sql: `INSERT INTO app_pages_online (id, app, slug, name, "pageType", seo, blocks) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    args: [pageId, appId, '/', 'Home', 'page', homeSeo, blocks],
+    sql: `INSERT INTO app_pages_online (id, app, slug, name, "pageType", seo, blocks, online) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    args: [pageId, appId, '/', 'Home', 'page', homeSeo, blocks, true],
   })
 
   return { appId }

@@ -213,7 +213,6 @@ export interface Media {
   alt: string;
   deletedAt?: string | null;
   deletedBy?: string | null;
-  prefix?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -532,7 +531,6 @@ export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   deletedAt?: T;
   deletedBy?: T;
-  prefix?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

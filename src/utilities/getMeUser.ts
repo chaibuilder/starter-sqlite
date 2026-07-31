@@ -1,42 +1,47 @@
-import { cookies, headers } from 'next/headers'
+import { cookies, headers as nextHeaders } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { getPayload } from 'payload'
+
+import configPromise from '@payload-config'
 
 import type { User } from '../payload-types'
-import { buildOriginURL } from './getURL'
 
 export const getMeUser = async (args?: {
   nullUserRedirect?: string
   validUserRedirect?: string
 }): Promise<{
   token: string
-  user: User
+  user: User | null
 }> => {
   const { nullUserRedirect, validUserRedirect } = args || {}
   const cookieStore = await cookies()
   const token = cookieStore.get('payload-token')?.value
-  const requestHeaders = await headers()
-  const origin = buildOriginURL({
-    host: requestHeaders.get('x-forwarded-host') ?? requestHeaders.get('host'),
-    forwardedProto: requestHeaders.get('x-forwarded-proto') ?? 'http',
-  })
 
-  const meUserReq = await fetch(`${origin}/api/users/me`, {
-    headers: {
-      Authorization: `JWT ${token}`,
-    },
-  })
+  // Verify the session against Payload's Local API instead of fetching our own `/api/users/me`
+  // over HTTP. A server-side self-fetch resolves to the incoming request host, which on a Vercel
+  // preview is a protection-gated `*.vercel.app` URL — Vercel's auth wall answers with an HTML
+  // login page (HTTP 200), and `.json()` then throws
+  // `SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON`, surfacing as a 500.
+  // The Local API runs in-process: no network hop, no origin guessing, no protection wall.
+  let user: User | null = null
 
-  const {
-    user,
-  }: {
-    user: User
-  } = await meUserReq.json()
+  if (token) {
+    try {
+      const payload = await getPayload({ config: configPromise })
+      const result = await payload.auth({ headers: await nextHeaders() })
+      user = (result.user as User | null) ?? null
+    } catch (error) {
+      user = null
+      // eslint-disable-next-line no-console
+      console.error('getMeUser: failed to verify session', error)
+    }
+  }
 
-  if (validUserRedirect && meUserReq.ok && user) {
+  if (validUserRedirect && user) {
     redirect(validUserRedirect)
   }
 
-  if (nullUserRedirect && (!meUserReq.ok || !user)) {
+  if (nullUserRedirect && !user) {
     redirect(nullUserRedirect)
   }
 

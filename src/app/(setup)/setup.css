@@ -7,47 +7,48 @@
  */
 
 :root {
-  --bg: #f8fafc;
-  --surface: #ffffff;
-  --surface-hover: #f1f5f9;
-  --border: #e2e8f0;
-  --text: #0f172a;
-  --muted: #64748b;
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-glow: rgba(37, 99, 235, 0.15);
-  --primary-text: #ffffff;
+  --bg: #09090B;
+  --surface: #0C0C0E;
+  --surface-hover: #18181b;
+  --border: #27272A;
+  --text: #FAFAFA;
+  --muted: #A1A1AA;
+  --primary: #F2A63A;
+  --primary-hover: #d99128;
+  --primary-glow: rgba(242, 166, 58, 0.15);
+  --primary-text: #191106;
   --ok: #10b981;
   --ok-bg: #ecfdf5;
   --warn: #f59e0b;
   --warn-bg: #fffbeb;
-  --error: #ef4444;
-  --error-bg: #fef2f2;
-  --code-bg: #0f172a;
-  --code-text: #f8fafc;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.08);
+  --error: #FF5252;
+  --error-bg: #450a0a;
+  --code-bg: #0C0C0E;
+  --code-text: #FAFAFA;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.4);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #09090b;
-    --surface: #121215;
+    --bg: #09090B;
+    --surface: #0C0C0E;
     --surface-hover: #18181b;
-    --border: #27272a;
-    --text: #f4f4f5;
-    --muted: #a1a1aa;
-    --primary: #3b82f6;
-    --primary-hover: #60a5fa;
-    --primary-glow: rgba(59, 130, 246, 0.2);
+    --border: #27272A;
+    --text: #FAFAFA;
+    --muted: #A1A1AA;
+    --primary: #F2A63A;
+    --primary-hover: #d99128;
+    --primary-glow: rgba(242, 166, 58, 0.2);
+    --primary-text: #191106;
     --ok: #34d399;
     --ok-bg: #064e3b;
     --warn: #fbbf24;
     --warn-bg: #451a03;
-    --error: #f87171;
+    --error: #FF5252;
     --error-bg: #450a0a;
-    --code-bg: #18181b;
-    --code-text: #f4f4f5;
+    --code-bg: #0C0C0E;
+    --code-text: #FAFAFA;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
   }

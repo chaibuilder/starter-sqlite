@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from 'next'
+import { Geist } from 'next/font/google'
 import './setup.css'
+
+const geist = Geist({ subsets: ['latin'] })
 
 /**
  * Setup is never a page anyone should reach from a search result: before it runs
@@ -33,7 +36,7 @@ export const viewport: Viewport = {
 export default function SetupLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={geist.className}>{children}</body>
     </html>
   )
 }

@@ -57,8 +57,8 @@ function hasEnvMedia(): boolean {
 function hasEnvAi(): boolean {
   return Boolean(
     process.env.AI_GATEWAY_API_KEY ||
-      process.env.OPENROUTER_API_KEY ||
-      process.env.OPENAI_COMPATIBLE_API_KEY,
+    process.env.OPENROUTER_API_KEY ||
+    process.env.OPENAI_COMPATIBLE_API_KEY,
   )
 }
 

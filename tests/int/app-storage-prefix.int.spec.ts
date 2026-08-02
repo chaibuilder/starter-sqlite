@@ -34,6 +34,11 @@ describe('getAppStoragePrefix', () => {
     expect(prefix).not.toContain(APP_KEY.split('-').at(-1))
   })
 
+  it('joins the surviving groups in reverse order', () => {
+    const [first, second, third, fourth] = APP_KEY.split('-')
+    expect(getAppStoragePrefix()).toBe(`${fourth}${third}${second}${first}`)
+  })
+
   it('is stable for the same app key', () => {
     expect(getAppStoragePrefix()).toBe(getAppStoragePrefix())
   })
@@ -45,10 +50,10 @@ describe('getAppStoragePrefix', () => {
     expect(a).not.toBe(b)
   })
 
-  // Only the leading 20 hex characters are significant. Harmless for the
-  // `randomUUID()` keys `/setup` writes, but hand-picked sequential keys that
-  // differ only in the last group will share a folder.
-  it('ignores everything after the 20th hex character', () => {
+  // The final group is dropped, so it cannot affect the folder. Harmless for
+  // the `randomUUID()` keys `/setup` writes, but hand-picked sequential keys
+  // that differ only in that group will share a folder.
+  it("ignores the app key's final group", () => {
     expect(getAppStoragePrefix('00000000-0000-4000-8000-000000000001')).toBe(
       getAppStoragePrefix('00000000-0000-4000-8000-000000000002'),
     )
@@ -71,19 +76,27 @@ describe('getAppStoragePrefix', () => {
     expect(() => getAppStoragePrefix()).toThrow(/CHAIBUILDER_APP_KEY/)
   })
 
-  // Truncating a non-UUID key would put files at the bucket root or under a
-  // prefix short enough to collide with another app.
-  it.each(['my-site', 'zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz', '926e3219b756'])(
-    'throws for a non-UUID app key (%j)',
-    (key) => {
-      expect(() => getAppStoragePrefix(key)).toThrow(/CHAIBUILDER_APP_KEY/)
-    },
-  )
+  // Dropping a group off a key that has none would leave an empty prefix, so
+  // anything not UUID-shaped has to be rejected — including a hyphen-less key
+  // that carries all 32 hex characters.
+  it.each([
+    'my-site',
+    'zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz',
+    '926e3219b756',
+    '926e3219b7564b17856bad17c4fe139c',
+    '926e3219-b756-4b17-856b',
+  ])('throws for a non-UUID app key (%j)', (key) => {
+    expect(() => getAppStoragePrefix(key)).toThrow(/CHAIBUILDER_APP_KEY/)
+  })
 
   // Pin expected output so an accidental change to the derivation is caught —
   // it would send new uploads to a different folder than every existing file.
   it('matches pinned output for a fixture app key', () => {
-    expect(getAppStoragePrefix(APP_KEY)).toBe('926e3219b7564b17856b')
+    expect(getAppStoragePrefix(APP_KEY)).toBe('856b4b17b756926e3219')
+  })
+
+  it('accepts an uppercase app key', () => {
+    expect(getAppStoragePrefix(APP_KEY.toUpperCase())).toBe(getAppStoragePrefix(APP_KEY))
   })
 })
 

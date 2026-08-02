@@ -1,36 +1,36 @@
-/**
- * Number of hex characters kept from the app key. A UUID is 32 hex characters
- * in five groups; dropping the final 12-character group and the hyphens leaves
- * a 20-character token — 80 bits, far more than enough to keep app folders from
- * colliding, while the app key is never published in full.
- */
-const PREFIX_LENGTH = 20
+/** Canonical UUID: five hex groups of 8-4-4-4-12 characters. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /**
  * Opaque, deterministic R2 folder id for the current app.
  *
- * The app key with its hyphens removed, truncated to the first
- * {@link PREFIX_LENGTH} hex characters. Deliberately a pure function of the app
- * key and nothing else: an app's folder is fixed for the life of the app, and
- * there is no constant here that anyone can change to send new uploads to a
- * second folder while old files stay behind in the first.
+ * The app key's final group is dropped and the remaining four are joined in
+ * reverse order, giving 20 hex characters:
+ *
+ *     926e3219-b756-4b17-856b-ad17c4fe139c  ->  856b4b17b756926e3219
+ *
+ * Deliberately a pure function of the app key and nothing else: an app's folder
+ * is fixed for the life of the app, and there is no constant here that anyone
+ * can change to send new uploads to a second folder while old files stay behind
+ * in the first.
  *
  * The dropped group keeps the whole app key out of object paths — those 48 bits
- * cannot be recovered from the prefix.
+ * cannot be recovered from the prefix — and the reversal stops the remainder
+ * from reading as the head of a UUID.
  */
 export function getAppStoragePrefix(appId?: string): string {
   const appKey = appId ?? process.env.CHAIBUILDER_APP_KEY
   if (!appKey) {
     throw new Error('CHAIBUILDER_APP_KEY is required to compute storage prefix')
   }
-  const hex = appKey.replace(/-/g, '').toLowerCase()
+  const normalized = appKey.toLowerCase()
   // `/setup` always writes a `randomUUID()`. Anything else is a hand-edited key,
-  // and truncating it would put files at the bucket root or under a prefix
-  // short enough to collide with another app — fail loudly instead.
-  if (!/^[0-9a-f]{32}$/.test(hex)) {
+  // and dropping a group off a value that has none would put files at the bucket
+  // root or under a prefix short enough to collide — fail loudly instead.
+  if (!UUID_RE.test(normalized)) {
     throw new Error('CHAIBUILDER_APP_KEY must be a UUID to compute storage prefix')
   }
-  return hex.slice(0, PREFIX_LENGTH)
+  return normalized.split('-').slice(0, -1).reverse().join('')
 }
 
 /**

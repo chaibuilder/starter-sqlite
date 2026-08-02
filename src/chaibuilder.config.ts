@@ -7,9 +7,9 @@ import { Blog } from '@/collections/Blog'
 import config from '@payload-config'
 import { createLibsqlDB } from 'chaipro/db/libsql'
 import {
-    asChaiBuilderGlobalProvider,
-    buildChaiBuilderConfig,
-    payloadMediaPlugin,
+  asChaiBuilderGlobalProvider,
+  buildChaiBuilderConfig,
+  payloadMediaPlugin,
 } from 'chaipro/payload'
 import { aiPlugin } from 'chaipro/plugins/ai-pro/server'
 import { animationPlugin } from 'chaipro/plugins/animation/server'

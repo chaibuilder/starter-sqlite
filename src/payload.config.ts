@@ -15,7 +15,7 @@ import { SiteConfig } from './collections/SiteConfig'
 import { Users } from './collections/Users'
 
 import { getAdminRoute } from '@/utilities/adminRoute'
-import { getAppStoragePrefix } from '@/utilities/getAppStoragePrefix'
+import { getMediaStoragePrefix } from '@/utilities/getAppStoragePrefix'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -64,6 +64,7 @@ export function resolveDatabase(override?: { url: string }): { url: string } {
 export function buildPayloadConfig(overrides: PayloadConfigOverrides = {}) {
   const { url: databaseUrl } = resolveDatabase(overrides.database)
   const secret = overrides.secret || process.env.PAYLOAD_SECRET || PLACEHOLDER_SECRET
+  const mediaStoragePrefix = getMediaStoragePrefix()
 
   return buildConfig({
     routes: {
@@ -165,12 +166,13 @@ export function buildPayloadConfig(overrides: PayloadConfigOverrides = {}) {
       }),
       // Local disk uploads do not survive a redeploy on serverless hosts, so S3
       // is registered whenever the bucket credentials are present. The app key
-      // is required too, since the storage prefix is derived from it.
-      ...(mediaStorageActive && process.env.CHAIBUILDER_APP_KEY
+      // is required too, since the storage prefix is derived from it — an empty
+      // prefix means one of the two is missing.
+      ...(mediaStoragePrefix
         ? [
             s3Storage({
               collections: {
-                media: { prefix: getAppStoragePrefix() },
+                media: { prefix: mediaStoragePrefix },
               },
               bucket: process.env.BUCKET_NAME!,
               config: {

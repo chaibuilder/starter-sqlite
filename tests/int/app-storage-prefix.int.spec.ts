@@ -3,12 +3,15 @@ import { getAppStoragePrefix, getMediaStoragePrefix } from '../../src/utilities/
 
 const PREFIX_RE = /^[0-9a-f]{20}$/
 
+const APP_KEY = '926e3219-b756-4b17-856b-ad17c4fe139c'
+const OTHER_APP_KEY = '3f5a1c88-2d94-4e07-b1aa-6c3e9f2d7b41'
+
 describe('getAppStoragePrefix', () => {
   const env = process.env
 
   beforeEach(() => {
     process.env = { ...env }
-    process.env.CHAIBUILDER_APP_KEY = '00000000-0000-4000-8000-000000000001'
+    process.env.CHAIBUILDER_APP_KEY = APP_KEY
   })
 
   afterEach(() => {
@@ -23,13 +26,12 @@ describe('getAppStoragePrefix', () => {
     expect(prefix).not.toContain('-')
   })
 
-  it('leaks neither the app key nor the full derived UUID', () => {
-    const appKey = process.env.CHAIBUILDER_APP_KEY!
+  it('does not publish the app key in full', () => {
     const prefix = getAppStoragePrefix()
-    expect(prefix).not.toBe(appKey)
-    expect(prefix).not.toContain(appKey.replace(/-/g, ''))
-    // 20 of the derived UUID's 32 hex characters — the last group is dropped.
-    expect(prefix).toHaveLength(20)
+    expect(prefix).not.toBe(APP_KEY)
+    expect(prefix).not.toContain(APP_KEY.replace(/-/g, ''))
+    // The final group is dropped, so those 48 bits are absent from the path.
+    expect(prefix).not.toContain(APP_KEY.split('-').at(-1))
   })
 
   it('is stable for the same app key', () => {
@@ -38,9 +40,18 @@ describe('getAppStoragePrefix', () => {
 
   it('changes when app key changes', () => {
     const a = getAppStoragePrefix()
-    process.env.CHAIBUILDER_APP_KEY = '00000000-0000-4000-8000-000000000002'
+    process.env.CHAIBUILDER_APP_KEY = OTHER_APP_KEY
     const b = getAppStoragePrefix()
     expect(a).not.toBe(b)
+  })
+
+  // Only the leading 20 hex characters are significant. Harmless for the
+  // `randomUUID()` keys `/setup` writes, but hand-picked sequential keys that
+  // differ only in the last group will share a folder.
+  it('ignores everything after the 20th hex character', () => {
+    expect(getAppStoragePrefix('00000000-0000-4000-8000-000000000001')).toBe(
+      getAppStoragePrefix('00000000-0000-4000-8000-000000000002'),
+    )
   })
 
   it('is unaffected by PAYLOAD_SECRET', () => {
@@ -51,7 +62,7 @@ describe('getAppStoragePrefix', () => {
 
   it('accepts explicit appId override', () => {
     const fromEnv = getAppStoragePrefix()
-    const fromArg = getAppStoragePrefix('00000000-0000-4000-8000-000000000001')
+    const fromArg = getAppStoragePrefix(APP_KEY)
     expect(fromArg).toBe(fromEnv)
   })
 
@@ -60,12 +71,19 @@ describe('getAppStoragePrefix', () => {
     expect(() => getAppStoragePrefix()).toThrow(/CHAIBUILDER_APP_KEY/)
   })
 
-  // Pin expected output so accidental namespace or truncation changes are
-  // caught — either would orphan every file already in the bucket.
+  // Truncating a non-UUID key would put files at the bucket root or under a
+  // prefix short enough to collide with another app.
+  it.each(['my-site', 'zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz', '926e3219b756'])(
+    'throws for a non-UUID app key (%j)',
+    (key) => {
+      expect(() => getAppStoragePrefix(key)).toThrow(/CHAIBUILDER_APP_KEY/)
+    },
+  )
+
+  // Pin expected output so an accidental change to the derivation is caught —
+  // it would send new uploads to a different folder than every existing file.
   it('matches pinned output for a fixture app key', () => {
-    expect(getAppStoragePrefix('00000000-0000-4000-8000-000000000001')).toBe(
-      '56e6552ee274526d85a9',
-    )
+    expect(getAppStoragePrefix(APP_KEY)).toBe('926e3219b7564b17856b')
   })
 })
 

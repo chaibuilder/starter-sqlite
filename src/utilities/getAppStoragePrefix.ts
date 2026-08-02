@@ -41,3 +41,21 @@ export function getAppStoragePrefix(appId?: string): string {
   }
   return uuidV5(appKey, MEDIA_STORAGE_NAMESPACE)
 }
+
+/**
+ * The prefix media files are actually stored under, or `''` when uploads go to
+ * local disk. Bucket credentials and the app key are both required: without
+ * either one, `s3Storage` is not registered and nothing is prefixed.
+ *
+ * Resolved per call rather than at module load so it stays a runtime value —
+ * baking it into the database schema as a column default would make the schema
+ * differ between deployments and between build and run.
+ */
+export function getMediaStoragePrefix(): string {
+  const configured =
+    process.env.BUCKET_NAME &&
+    process.env.AWS_ACCESS_KEY_ID &&
+    process.env.AWS_SECRET_ACCESS_KEY &&
+    process.env.CHAIBUILDER_APP_KEY
+  return configured ? getAppStoragePrefix() : ''
+}

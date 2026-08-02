@@ -7,17 +7,104 @@ import { Blog } from '@/collections/Blog'
 import config from '@payload-config'
 import { createLibsqlDB } from 'chaipro/db/libsql'
 import {
-    asChaiBuilderGlobalProvider,
-    buildChaiBuilderConfig,
-    payloadMediaPlugin,
+  asChaiBuilderGlobalProvider,
+  buildChaiBuilderConfig,
+  payloadMediaPlugin,
 } from 'chaipro/payload'
 import { aiPlugin } from 'chaipro/plugins/ai-pro/server'
 import { animationPlugin } from 'chaipro/plugins/animation/server'
-import { mediaSearchPlugin } from 'chaipro/plugins/media-search/server'
 import { redirectsPlugin } from 'chaipro/plugins/redirects/server'
 import { revisionsPlugin } from 'chaipro/plugins/revisions/server'
 import { trashPlugin } from 'chaipro/plugins/trash/server'
 import type { ResolvedChaiBuilderServerConfig } from 'chaipro/types'
+
+/**
+ * The eight models the editor offers, picked for web design and front-end work.
+ * Most take images too, so a screenshot or mockup can be attached to the prompt;
+ * the text-only ones say so via `allowedFileTypes: []`. Each model is described
+ * once and mapped to the provider's own slug — Vercel AI Gateway and OpenRouter
+ * disagree on some vendor prefixes (`xai` vs `x-ai`, `zai` vs `z-ai`), so the id
+ * has to follow whichever provider is wired up.
+ */
+const AI_MODELS = [
+  {
+    gateway: 'anthropic/claude-opus-5',
+    openrouter: 'anthropic/claude-opus-5',
+    name: 'Claude Opus 5',
+    provider: 'anthropic',
+    multiplier: 5,
+    description: '5x Credits',
+  },
+  {
+    gateway: 'anthropic/claude-sonnet-5',
+    openrouter: 'anthropic/claude-sonnet-5',
+    name: 'Claude Sonnet 5',
+    provider: 'anthropic',
+    multiplier: 3,
+    description: '3x Credits',
+  },
+  {
+    gateway: 'openai/gpt-5.5',
+    openrouter: 'openai/gpt-5.5',
+    name: 'GPT-5.5',
+    provider: 'openai',
+    multiplier: 5,
+    description: '5x Credits',
+  },
+  {
+    gateway: 'google/gemini-3.6-flash',
+    openrouter: 'google/gemini-3.6-flash',
+    name: 'Gemini 3.6 Flash',
+    provider: 'google',
+    multiplier: 2,
+    description: '2x Credits',
+  },
+  {
+    gateway: 'xai/grok-4.5',
+    openrouter: 'x-ai/grok-4.5',
+    name: 'Grok 4.5',
+    provider: 'xai',
+    multiplier: 3,
+    description: '3x Credits',
+  },
+  {
+    gateway: 'moonshotai/kimi-k3',
+    openrouter: 'moonshotai/kimi-k3',
+    name: 'Kimi K3',
+    provider: 'moonshotai',
+    multiplier: 3,
+    description: '3x Credits',
+  },
+  {
+    gateway: 'zai/glm-5.2',
+    openrouter: 'z-ai/glm-5.2',
+    name: 'GLM 5.2',
+    provider: 'zai',
+    multiplier: 1,
+    description: '1x Credits',
+    // text-only model — it cannot read images/files
+    allowedFileTypes: [],
+  },
+  {
+    gateway: 'deepseek/deepseek-v4-pro',
+    openrouter: 'deepseek/deepseek-v4-pro',
+    name: 'DeepSeek V4 Pro',
+    provider: 'deepseek',
+    multiplier: 1,
+    description: '1x Credits',
+    // text-only model — it cannot read images/files
+    allowedFileTypes: [],
+  },
+]
+
+/**
+ * Mirrors chaipro's own provider resolution: an `OPENROUTER_API_KEY` wins,
+ * otherwise requests go through the Vercel AI Gateway (`AI_GATEWAY_API_KEY`).
+ */
+const aiModels = AI_MODELS.map(({ gateway, openrouter, ...model }) => ({
+  ...model,
+  id: process.env.OPENROUTER_API_KEY ? openrouter : gateway,
+}))
 
 const chaiConfig: Readonly<ResolvedChaiBuilderServerConfig> = buildChaiBuilderConfig({
   payloadConfig: config,
@@ -27,97 +114,18 @@ const chaiConfig: Readonly<ResolvedChaiBuilderServerConfig> = buildChaiBuilderCo
     url: process.env.DATABASE_URL || 'file:/tmp/chai-placeholder.db',
     authToken: process.env.DATABASE_AUTH_TOKEN || undefined,
   }),
-  // Registering a plugin enables its feature; options carry the feature's config.
-  // Plugin tables are NOT gated here — `chaiBuilderSchemaHookSqlite` injects the
-  // full ChaiBuilder schema, so every plugin's tables exist (empty when
-  // unregistered) and enabling a plugin later needs no migration.
-  // Not registered: aiCreditsPlugin (credit billing), multilingualPlugin,
-  // tenancyPlugin (core pins a single app), plansPlugin, licensingPlugin,
-  // rolesPlugin (DB-backed roles), layoutPlugin, formSubmissionsPlugin (this
-  // starter writes submissions to its own Payload collection).
   plugins: [
     // Payload-backed DAM (asset actions + media trash entity). Non-Payload
     // hosts would register mediaPlugin({ storage }) instead.
     payloadMediaPlugin(),
     redirectsPlugin(),
     trashPlugin(),
-    mediaSearchPlugin({
-      providers: [
-        {
-          id: 'pexels',
-          filters: {
-            orientation: ['default', 'landscape', 'portrait', 'square'],
-            size: ['default', 'large', 'medium', 'small'],
-            color: [
-              'default',
-              'red',
-              'orange',
-              'yellow',
-              'green',
-              'turquoise',
-              'blue',
-              'violet',
-              'pink',
-              'brown',
-              'black',
-              'gray',
-              'white',
-            ],
-          },
-        },
-        {
-          id: 'unsplash',
-          filters: {
-            orientation: ['default', 'landscape', 'portrait', 'squarish'],
-            color: [
-              'default',
-              'black_and_white',
-              'black',
-              'white',
-              'yellow',
-              'orange',
-              'red',
-              'purple',
-              'magenta',
-              'green',
-              'teal',
-              'blue',
-            ],
-            order_by: ['default', 'relevant', 'latest'],
-          },
-        },
-      ],
-    }),
     aiPlugin(),
     revisionsPlugin({ drafts: true, maxRevisions: 10 }),
     animationPlugin(),
   ],
   ai: {
-    models: [
-      {
-        id: 'zai/glm-5.2',
-        name: 'GLM 5.2',
-        provider: 'zai',
-        multiplier: 3,
-        description: '3x Credits',
-        // text-only model — it cannot read images/files
-        allowedFileTypes: [],
-      },
-      {
-        id: 'google/gemini-3.5-flash',
-        name: 'Gemini 3.5 Flash',
-        provider: 'google',
-        multiplier: 3,
-        description: '3x Credits',
-      },
-      {
-        id: 'google/gemini-3-flash',
-        name: 'Gemini 3 Flash',
-        provider: 'google',
-        multiplier: 1,
-        description: '1x Credits',
-      },
-    ],
+    models: aiModels,
   },
   globalDataProvider: asChaiBuilderGlobalProvider({ slug: 'site-config' }),
   pageTypes: [

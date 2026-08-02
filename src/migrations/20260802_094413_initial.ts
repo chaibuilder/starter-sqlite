@@ -624,6 +624,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	\`app\` text NOT NULL,
   	\`deleted_at\` text,
   	\`deleted_by\` text,
+  	\`prefix\` text,
   	\`updated_at\` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
   	\`created_at\` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
   	\`url\` text,

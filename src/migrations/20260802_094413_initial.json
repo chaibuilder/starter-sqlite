@@ -4410,6 +4410,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "prefix": {
+          "name": "prefix",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
@@ -7014,6 +7021,6 @@
   "internal": {
     "indexes": {}
   },
-  "id": "17015411-10be-4111-9c84-5b83a421acb9",
+  "id": "af3746aa-04f8-4378-aeee-4d1efb570876",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

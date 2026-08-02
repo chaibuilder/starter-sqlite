@@ -2,8 +2,9 @@ import { createHash } from 'node:crypto'
 
 /**
  * Project-specific UUID v5 namespace. Fixed constant — do not change after
- * deploy (would change every app's R2 prefix). Not secret; obscures app UUID
- * in bucket paths when combined with v5(appKey).
+ * deploy (would change every app's R2 prefix, orphaning already-uploaded
+ * files). Not secret; obscures app UUID in bucket paths when combined with
+ * v5(appKey).
  */
 const MEDIA_STORAGE_NAMESPACE = 'a3f2c891-4e7b-5d2a-9c18-6f0e1b3d5a72'
 
@@ -31,15 +32,27 @@ function uuidV5(name: string, namespaceUuid: string): string {
 }
 
 /**
+ * Number of hex characters kept from the derived UUID. A UUID is 32 hex
+ * characters in five groups; dropping the final 12-character group and the
+ * hyphens leaves a 20-character token — 80 bits, far more than enough to keep
+ * app folders from colliding, while nothing in the path still reads as a UUID.
+ */
+const PREFIX_LENGTH = 20
+
+/**
  * Opaque, deterministic R2 folder id for the current app.
- * UUID v5(CHAIBUILDER_APP_KEY) under a fixed project namespace.
+ *
+ * UUID v5(CHAIBUILDER_APP_KEY) under a fixed project namespace, then stripped
+ * of hyphens and truncated. Storage prefixes appear in object paths, so the
+ * value is doubly removed from the app key: the v5 hash is not reversible, and
+ * the truncation means the derived UUID is not published in full either.
  */
 export function getAppStoragePrefix(appId?: string): string {
   const appKey = appId ?? process.env.CHAIBUILDER_APP_KEY
   if (!appKey) {
     throw new Error('CHAIBUILDER_APP_KEY is required to compute storage prefix')
   }
-  return uuidV5(appKey, MEDIA_STORAGE_NAMESPACE)
+  return uuidV5(appKey, MEDIA_STORAGE_NAMESPACE).replace(/-/g, '').slice(0, PREFIX_LENGTH)
 }
 
 /**

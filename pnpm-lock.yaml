@@ -50,8 +50,8 @@ importers:
         specifier: ^0.5.11
         version: 0.5.11(tailwindcss@4.3.3)
       chaipro:
-        specifier: ^0.3.0
-        version: 0.3.0(0a9275dfd3343f1dea1ef8265e506048)
+        specifier: ^0.3.2
+        version: 0.3.2(0a9275dfd3343f1dea1ef8265e506048)
       cnfast:
         specifier: ^0.0.8
         version: 0.0.8
@@ -3845,8 +3845,8 @@ packages:
     resolution: {integrity: sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg==}
     engines: {node: '>=18'}
 
-  chaipro@0.3.0:
-    resolution: {integrity: sha512-TfMshz6w3MN44JPxjOnvurj3ogVA07acmuVP5Sx5HDKq8gBl5SQDGskB12+B2WrgvONZze3MC6mXyM9VLwmiFQ==}
+  chaipro@0.3.2:
+    resolution: {integrity: sha512-3MliMVSYOR33hK0KWXtIBkXXn+Z6V4pcBT8a6NCLCgG8F6mu/ZgZsgfxI+Hq/MQ+VAV/kGbl+5ZW8zl8kPVxJQ==}
     hasBin: true
     peerDependencies:
       '@ai-sdk/openai-compatible': '>=2.0.0'
@@ -11040,7 +11040,7 @@ snapshots:
 
   chai@6.2.2: {}
 
-  chaipro@0.3.0(0a9275dfd3343f1dea1ef8265e506048):
+  chaipro@0.3.2(0a9275dfd3343f1dea1ef8265e506048):
     dependencies:
       '@ai-sdk/react': 3.0.221(react@19.2.6)(zod@4.3.5)
       '@floating-ui/dom': 1.7.4

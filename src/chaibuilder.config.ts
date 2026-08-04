@@ -5,6 +5,7 @@
  */
 import { Blog } from '@/collections/Blog'
 import config from '@payload-config'
+import { openRouterPlugin as openRouterProvider } from 'chaipro/ai/openrouter'
 import { createLibsqlDB } from 'chaipro/db/libsql'
 import {
   asChaiBuilderGlobalProvider,
@@ -125,6 +126,7 @@ const chaiConfig: Readonly<ResolvedChaiBuilderServerConfig> = buildChaiBuilderCo
     animationPlugin(),
   ],
   ai: {
+    providers: process.env.OPENROUTER_API_KEY ? [openRouterProvider] : undefined,
     models: aiModels,
   },
   globalDataProvider: asChaiBuilderGlobalProvider({ slug: 'site-config' }),

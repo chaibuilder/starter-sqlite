@@ -75,6 +75,10 @@ export function buildPayloadConfig(overrides: PayloadConfigOverrides = {}) {
   const mediaStoragePrefix = getMediaStoragePrefix()
 
   return buildConfig({
+    upload: {
+      safeFileNames: true,
+      preserveExtension: 10,
+    },
     routes: {
       admin: getAdminRoute(),
     },
@@ -178,6 +182,7 @@ export function buildPayloadConfig(overrides: PayloadConfigOverrides = {}) {
               },
               bucket: process.env.BUCKET_NAME!,
               config: {
+                forcePathStyle: true,
                 credentials: {
                   accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
                   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,

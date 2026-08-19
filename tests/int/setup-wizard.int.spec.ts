@@ -19,12 +19,20 @@ const DB_URL = testDatabaseUrl('wizard')
 
 describe('setup wizard seeding', () => {
   let restorePush: (() => void) | undefined
+  let previousAppKey: string | undefined
 
   beforeAll(async () => {
     await resetTestDatabase(DB_URL)
+    // User `afterRead` resolves app role via CHAIBUILDER_APP_KEY against
+    // DATABASE_URL (the shared test DB), not this scratch file. A live .env
+    // app key would query a database that has not been migrated yet.
+    previousAppKey = process.env.CHAIBUILDER_APP_KEY
+    delete process.env.CHAIBUILDER_APP_KEY
   })
   afterAll(() => {
     restorePush?.()
+    if (previousAppKey === undefined) delete process.env.CHAIBUILDER_APP_KEY
+    else process.env.CHAIBUILDER_APP_KEY = previousAppKey
   })
 
   it('migrates a fresh database, creates the admin, and seeds the app', async () => {

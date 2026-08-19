@@ -13,9 +13,9 @@ minimumReleaseAgeExclude:
 overrides:
   "framer-motion@12.23.20>motion-dom": "12.23.20"
   "framer-motion@12.23.20>motion-utils": "12.23.6"
-  # pin Payload stack — caret on storage-s3 pulled 3.86 and duplicated @payloadcms/ui context
-  "@payloadcms/ui": "3.85.1"
-  "@payloadcms/storage-s3": "3.85.1"
-  "@payloadcms/plugin-cloud-storage": "3.85.1"
-  "@payloadcms/db-postgres": "3.85.1"
-  "payload": "3.85.1"
+  # pin Payload stack to a single version so plugins cannot duplicate @payloadcms/ui
+  "@payloadcms/ui": "3.88.0"
+  "@payloadcms/storage-s3": "3.88.0"
+  "@payloadcms/plugin-cloud-storage": "3.88.0"
+  "@payloadcms/db-postgres": "3.88.0"
+  "payload": "3.88.0"

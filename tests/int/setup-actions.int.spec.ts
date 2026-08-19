@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, beforeAll, afterAll } from 'vitest'
 import { runSetup, testConnection } from '@/app/(setup)/setup/actions'
 import { TEST_DATABASE_URL } from '../helpers/postgres'
 
@@ -14,6 +14,20 @@ const DB = { source: 'input', url: TEST_DATABASE_URL } as const
 const VALID = { appName: 'Test Site', email: 'owner@example.com', password: 'secret' }
 
 describe('runSetup validation', () => {
+  let previousAppKey: string | undefined
+
+  beforeAll(() => {
+    // `runSetup` refuses to run on an already-configured deployment. Local
+    // `.env` files set CHAIBUILDER_APP_KEY, which would skip these checks.
+    previousAppKey = process.env.CHAIBUILDER_APP_KEY
+    delete process.env.CHAIBUILDER_APP_KEY
+  })
+
+  afterAll(() => {
+    if (previousAppKey === undefined) delete process.env.CHAIBUILDER_APP_KEY
+    else process.env.CHAIBUILDER_APP_KEY = previousAppKey
+  })
+
   it('rejects a missing site name', async () => {
     const result = await runSetup({ database: DB, ...VALID, appName: '   ' })
     expect(result).toEqual({ ok: false, error: 'Enter a name for your site.' })
@@ -44,6 +58,18 @@ describe('runSetup validation', () => {
 })
 
 describe('testConnection', () => {
+  let previousAppKey: string | undefined
+
+  beforeAll(() => {
+    previousAppKey = process.env.CHAIBUILDER_APP_KEY
+    delete process.env.CHAIBUILDER_APP_KEY
+  })
+
+  afterAll(() => {
+    if (previousAppKey === undefined) delete process.env.CHAIBUILDER_APP_KEY
+    else process.env.CHAIBUILDER_APP_KEY = previousAppKey
+  })
+
   it('rejects an empty URL without opening a client', async () => {
     expect(await testConnection({ url: '' })).toEqual({ ok: false, error: 'Enter a database URL.' })
   })

@@ -38,7 +38,7 @@ describe('sanitizeLexicalState', () => {
 
     const sanitized = sanitizeLexicalState(corrupt)
     expect(sanitized?.root.children).toHaveLength(1)
-    expect((sanitized?.root.children[0] as { children: unknown[] }).children).toHaveLength(0)
+    expect((sanitized?.root.children[0] as unknown as { children: unknown[] }).children).toHaveLength(0)
   })
 
   it('returns default state when root is invalid', () => {

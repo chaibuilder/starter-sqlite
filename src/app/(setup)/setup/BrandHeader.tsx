@@ -3,12 +3,12 @@ export function BrandHeader() {
     <div className="brand-header">
       <img
         src="/favicon.svg"
-        alt="ChaiBuilder Logo"
+        alt="chaibuilder Logo"
         width={32}
         height={32}
         className="brand-logo"
       />
-      <span className="brand-title">ChaiBuilder</span>
+      <span className="brand-title">chaibuilder</span>
     </div>
   )
 }

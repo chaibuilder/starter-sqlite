@@ -7,47 +7,48 @@
  */
 
 :root {
-  --bg: #f8fafc;
-  --surface: #ffffff;
-  --surface-hover: #f1f5f9;
-  --border: #e2e8f0;
-  --text: #0f172a;
-  --muted: #64748b;
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-glow: rgba(37, 99, 235, 0.15);
-  --primary-text: #ffffff;
+  --bg: #09090B;
+  --surface: #0C0C0E;
+  --surface-hover: #222224;
+  --border: #202022;
+  --text: #FAFAFA;
+  --muted: #A1A1AA;
+  --primary: #F2A63A;
+  --primary-hover: #d99128;
+  --primary-glow: rgba(242, 166, 58, 0.15);
+  --primary-text: #191106;
   --ok: #10b981;
   --ok-bg: #ecfdf5;
   --warn: #f59e0b;
   --warn-bg: #fffbeb;
-  --error: #ef4444;
-  --error-bg: #fef2f2;
-  --code-bg: #0f172a;
-  --code-text: #f8fafc;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.08);
+  --error: #FF5252;
+  --error-bg: #752727a9;
+  --code-bg: #0C0C0E;
+  --code-text: #FAFAFA;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.4);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #09090b;
-    --surface: #121215;
+    --bg: #09090B;
+    --surface: #0C0C0E;
     --surface-hover: #18181b;
-    --border: #27272a;
-    --text: #f4f4f5;
-    --muted: #a1a1aa;
-    --primary: #3b82f6;
-    --primary-hover: #60a5fa;
-    --primary-glow: rgba(59, 130, 246, 0.2);
+    --border: #202022;
+    --text: #FAFAFA;
+    --muted: #A1A1AA;
+    --primary: #F2A63A;
+    --primary-hover: #d99128;
+    --primary-glow: rgba(242, 166, 58, 0.2);
+    --primary-text: #191106;
     --ok: #34d399;
     --ok-bg: #064e3b;
     --warn: #fbbf24;
     --warn-bg: #451a03;
-    --error: #f87171;
-    --error-bg: #450a0a;
-    --code-bg: #18181b;
-    --code-text: #f4f4f5;
+    --error: #FF5252;
+    --error-bg: #ff52521a;
+    --code-bg: #0C0C0E;
+    --code-text: #FAFAFA;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
   }
@@ -55,6 +56,26 @@
 
 * {
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted);
 }
 
 html,
@@ -64,20 +85,16 @@ body {
 
 body {
   margin: 0;
-  background: var(--bg);
   color: var(--text);
-  font-family:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   /* The page itself never scrolls. Anything that does not fit scrolls inside
      the card body or `.scroll-area`, so the primary action stays in view. */
   overflow: hidden;
+  background: linear-gradient(to bottom, rgba(255, 166, 58, 0.04), transparent, rgba(255, 166, 58, 0.02)), var(--bg);
 }
 
 .wrap {
-  /* dvh, not vh: on phones the URL bar is part of `vh`, so `100vh` would put the
-     primary button under it. */
   height: 100dvh;
   max-width: 700px;
   margin: 0 auto;
@@ -87,27 +104,55 @@ body {
   padding-bottom: max(24px, env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
-  /* Lets the flexible child shrink below its content height instead of
-     pushing the shell past the viewport. */
   min-height: 0;
 }
 
-/* The one card the wizard shows: header and nav pinned, fields scroll between
-   them when the viewport is short. */
-.wrap > form.card {
+.setup-layout {
+  height: 100dvh;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 440px 1fr;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.setup-sidebar {
+  padding: 48px 40px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  height: 100%;
+  overflow-y: auto;
+}
+
+.setup-main {
+  padding: 48px 64px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+}
+
+/* The form acts as the main content area */
+.setup-form {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
   margin-bottom: 0;
+  max-width: 520px;
+  width: 100%;
+  padding-bottom: 24px;
 }
 
 .card-body {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
   overflow-y: auto;
   /* Keeps focus rings on full-width inputs off the scrollbar. */
-  padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 /* Screens made of several cards (success, status) scroll as a group instead. */
@@ -116,6 +161,7 @@ body {
   min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .scroll-area > *:last-child {
@@ -140,7 +186,7 @@ body {
 
 .brand-title {
   font-size: 20px;
-  font-weight: 750;
+  font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--text);
 }
@@ -202,10 +248,9 @@ p {
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 22px 24px;
   margin-bottom: 16px;
-  box-shadow: var(--shadow-md);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -225,16 +270,17 @@ p {
 
 label {
   display: block;
-  font-weight: 600;
+  font-weight: 500;
+  color: var(--text);
   font-size: 14px;
   margin: 16px 0 6px;
 }
 
 .field-hint {
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 400;
-  margin: 2px 0 6px;
+  color: #d4d4d87a;
+  font-size: 12px;
+  font-weight: 300;
+  margin: 6px 0px;
 }
 
 input[type='text'],
@@ -242,14 +288,12 @@ input[type='email'],
 input[type='password'],
 textarea {
   width: 100%;
-  padding: 11px 14px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg);
+  border-radius: 6px;
+  background: var(--surface);
   color: var(--text);
-  /* 16px exactly: iOS Safari zooms the page in when a focused field is smaller,
-     which would break the one-viewport layout on every tap. */
-  font-size: 16px;
+  font-size: 14px;
   font-family: inherit;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -258,22 +302,31 @@ input:focus,
 textarea:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
-button {
+button,
+.button-link {
   font: inherit;
-  font-weight: 600;
-  border-radius: 10px;
-  padding: 11px 20px;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.15;
+  border-radius: 6px;
+  padding: 0 16px;
+  height: 36px;
   border: 1px solid transparent;
   cursor: pointer;
   background: var(--primary);
   color: var(--primary-text);
   transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-sizing: border-box;
 }
 
-button:not(.secondary):not(.link):hover:not(:disabled) {
+button:not(.secondary):not(.link):not(.stepper-link):hover:not(:disabled),
+.button-link:not(.secondary):hover {
   background: var(--primary-hover);
   box-shadow: 0 2px 8px var(--primary-glow);
 }
@@ -502,98 +555,135 @@ code {
 .stepper {
   list-style: none;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+  gap: 4px;
   padding: 0;
-  margin: 0 0 14px;
-  flex: 0 0 auto;
+  margin: 24px 0 14px;
+  flex: 1 0 auto;
 }
 
 .stepper-link {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-size: 13px;
+  align-items: flex-start;
+  gap: 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--muted);
   cursor: pointer;
   transition: all 0.15s ease;
+  width: 100%;
+  text-align: left;
 }
 
 .stepper-link:disabled {
   cursor: default;
-  opacity: 0.9;
+  opacity: 0.7;
 }
 
-.stepper-num {
+.stepper-icon {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   border-radius: 999px;
   border: 1px solid var(--border);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.stepper-icon.ok {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+}
+
+.stepper-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stepper-title {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.stepper-desc {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 300;
 }
 
 .stepper li.current .stepper-link {
-  color: var(--text);
-  border-color: var(--primary);
-  background: var(--surface);
-  box-shadow: 0 0 0 2px var(--primary-glow);
-  font-weight: 650;
+  background: var(--surface-hover);
+  border-color: var(--border);
 }
 
-.stepper li.current .stepper-num {
+.stepper li.current .stepper-icon {
   background: var(--primary);
   border-color: var(--primary);
   color: var(--primary-text);
+  font-family: monospace;
+  line-height: 1;
 }
 
-.stepper li.done .stepper-link {
-  color: var(--text);
-  background: var(--surface);
-}
-
-.stepper li.done .stepper-num {
-  background: var(--ok);
-  border-color: var(--ok);
-  color: #ffffff;
-}
-
-.stepper li.done .stepper-link:not(:disabled):hover {
+.stepper li:not(.satisfied) .stepper-link:not(:disabled):hover {
   background: var(--surface-hover);
-  border-color: var(--border);
 }
 
 /* A step the deployment already satisfies: shown ticked, never navigated to. */
 .stepper li.satisfied .stepper-link {
   cursor: default;
-  color: var(--muted);
   background: transparent;
   border-color: transparent;
+}
+
+.step-indicator {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--primary);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.step-indicator-bar {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+  position: relative;
+}
+.step-indicator-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.3s ease;
+}
+
+.step-head {
+  margin-bottom: 8px;
 }
 
 .step-head h2:focus {
   outline: none;
 }
 
-.step-head h2:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 3px;
-}
 
 .step-nav {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 16px;
-  padding-top: 16px;
+  margin-top: 36px;
+  padding-top: 24px;
   border-top: 1px solid var(--border);
   flex: 0 0 auto;
 }
@@ -607,13 +697,17 @@ code {
 
 .review-list {
   margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
 }
 
 .review-row {
   display: flex;
-  gap: 12px;
-  align-items: baseline;
-  padding: 12px 0;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -622,8 +716,9 @@ code {
 }
 
 .review-row dt {
-  flex: 0 0 140px;
-  font-weight: 600;
+  flex: 0 0 120px;
+  font-weight: 500;
+  color: var(--muted);
   font-size: 14px;
 }
 
@@ -631,7 +726,7 @@ code {
   margin: 0;
   display: flex;
   gap: 10px;
-  align-items: baseline;
+  align-items: center;
   flex: 1 1 auto;
   min-width: 0;
   font-size: 14px;
@@ -639,6 +734,7 @@ code {
 
 .review-row dd > span {
   overflow-wrap: anywhere;
+  color: var(--text);
 }
 
 .muted-value {
@@ -781,6 +877,188 @@ code {
   }
 }
 
+/* Sidebar Stepper */
+ol.stepper {
+  list-style: none;
+  padding: 0;
+  margin: 32px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+ol.stepper li {
+  margin: 0;
+}
+
+.stepper-link {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.stepper-link:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.stepper-link:disabled {
+  cursor: default;
+}
+
+li.current .stepper-link {
+  background: var(--surface-hover);
+}
+
+.stepper-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+li.current .stepper-icon {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+
+li.todo .stepper-icon,
+li.done .stepper-icon {
+  background: var(--surface);
+  color: var(--muted);
+}
+
+li.done .stepper-icon.ok {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.stepper-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.stepper-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+}
+
+li.todo .stepper-link,
+li.done .stepper-link {
+  opacity: 0.5;
+}
+
+li.todo .stepper-link:hover:not(:disabled),
+li.done .stepper-link:hover:not(:disabled) {
+  opacity: 1;
+}
+
+.stepper-desc {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.sidebar-footer-text {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.sidebar-footer-text a {
+  display: inline-block;
+  margin-top: 4px;
+}
+
+/* Full Screen Loader Overlay */
+.loader-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(9, 9, 11, 0.95);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loader-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100vw;
+  height: 100vh;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.loader-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  z-index: 1;
+}
+
+.loader-step {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 20px;
+  color: #3f3f46;
+  transition: all 0.3s ease;
+}
+
+.loader-step.done {
+  color: var(--muted);
+}
+
+.loader-step.active {
+  color: #fff;
+  font-weight: 500;
+}
+
+.loader-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #3f3f46;
+  color: transparent;
+  transition: all 0.3s ease;
+}
+
+.loader-step.done .loader-icon {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: transparent;
+  color: var(--muted);
+}
+
+.loader-step.active .loader-icon {
+  background: #fff;
+  border-color: #fff;
+  color: #000;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+}
+
 /* Show/hide toggle sitting inside the password input. */
 .password-field {
   position: relative;
@@ -790,12 +1068,73 @@ code {
   padding-right: 64px;
 }
 
-.password-field .link {
+.password-field button.link {
   position: absolute;
-  right: 14px;
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
+  font-size: 9px;
+  background: var(--border);
+  opacity: 0.8;
+  padding: 4px 12px;
+  border-radius: 4px;
+  color: var(--text);
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+.password-field button.link:hover:not(:disabled) {
+  background: var(--surface-hover);
+  transform: translateY(-50%);
+  color: var(--text);
+}
+
+.password-strength {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.strength-bars {
+  display: flex;
+  gap: 4px;
+}
+
+.strength-bar {
+  width: 24px;
+  height: 2px;
+  background: var(--surface-hover);
+  transition: background-color 0.15s ease;
+}
+
+.strength-bar.active {
+  background: var(--muted);
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+}
+
+.sidebar-footer-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.sidebar-footer-text {
   font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.sidebar-footer-text a {
+  text-decoration: underline;
 }
 
 .tabs {
@@ -845,7 +1184,7 @@ code {
 .extra > summary {
   cursor: pointer;
   font-size: 14px;
-  font-weight: 620;
+  font-weight: 500;
   list-style: none;
   display: flex;
   align-items: center;
@@ -894,6 +1233,37 @@ code {
   margin-bottom: 0;
 }
 
+.provider-choice {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.provider-choice legend {
+  padding: 0 6px;
+  font-weight: 500;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.provider-choice label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.provider-choice a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
 /* Generated environment blocks: capped so a long one never pushes the copy
    button out of reach. */
 .env-block {
@@ -910,9 +1280,19 @@ code {
  * fixed box — so the page reverts to ordinary document scroll, which is what a
  * phone user expects anyway. The rest of these rules are sizing.
  */
-@media (max-width: 560px), (max-height: 560px) {
+@media (max-width: 768px) {
   body {
-    overflow: auto;
+    overflow-y: auto;
+    height: auto;
+  }
+
+  .setup-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding: 24px 20px;
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
   }
 
   .wrap {
@@ -920,20 +1300,23 @@ code {
     min-height: 100dvh;
   }
 
-  .wrap > form.card {
-    flex: 0 0 auto;
+  .setup-sidebar {
+    padding: 0;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 32px;
+    height: auto;
+    overflow-y: visible;
   }
 
-  .card-body,
-  .scroll-area {
-    overflow: visible;
-    padding-right: 0;
+  .setup-main {
+    padding: 0;
+    max-width: 100%;
+    overflow-y: visible;
   }
-}
 
-@media (max-width: 560px) {
-  .wrap {
-    padding-top: 16px;
+  .sidebar-footer {
+    display: none; /* Optionally hide on mobile if it takes too much vertical space */
   }
 
   h1 {

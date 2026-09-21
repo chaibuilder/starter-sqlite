@@ -123,121 +123,78 @@ export function SuccessScreen({
       <h1>Your site is ready — one last step</h1>
       <p className="lede">
         {isLocal
-          ? 'Add these environment variables to your .env file and restart the dev server — that is the last step.'
-          : 'Add these environment variables to your host and redeploy once — that is the last step.'}
+          ? 'To finish up: copy these environment variables into your .env file, and then restart your development server.'
+          : 'To finish up: copy these environment variables into your host (like Vercel), and then redeploy your site.'}
       </p>
 
       <div className="scroll-area">
         <div className="card">
-          <h2>1. Copy your environment variables</h2>
-          <p className="hint">
-            {useEnvDatabase
-              ? `DATABASE_URL is already set ${isLocal ? 'in your environment' : 'on this deployment'}, so it is not repeated here. `
-              : ''}
-            This is the only time the password-like values are shown.
-          </p>
+          <h2>Finish your deployment on Vercel</h2>
+          <ol className="steps" style={{ marginBottom: '16px' }}>
+            <li>
+              Open your Vercel project dashboard and go to <strong>Settings</strong> &rarr;{' '}
+              <strong>Environment Variables</strong>.
+            </li>
+            <li>Paste the environment variables block below and save.</li>
+            <li>
+              Go to <strong>Deployments</strong> &rarr; <strong>⋯</strong> on the latest one &rarr;{' '}
+              <strong>Redeploy</strong>.
+            </li>
+            {isLocal && (
+              <li>
+                To run locally, you can also paste these into your <code>.env</code> file and
+                restart your dev server.
+              </li>
+            )}
+          </ol>
+
           <pre className="env-block">
             <code>{block}</code>
           </pre>
+
           <div className="actions actions--tight">
-            {hostEnvUrl && (
-              <a
-                className="button-link"
-                href={hostEnvUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={copyThenFollow}
-              >
-                {sent ? '✓ Copied — opened' : `Copy and go to ${hostNoun}`}
-              </a>
-            )}
-            <button type="button" className="secondary" onClick={download}>
+            <a
+              className="button-link"
+              href={hostEnvUrl || 'https://vercel.com/dashboard'}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={copyThenFollow}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '36px',
+                padding: '0 16px',
+                lineHeight: '1',
+                textDecoration: 'none',
+                boxSizing: 'border-box',
+                borderRadius: '6px',
+              }}
+            >
+              {sent ? '✓ Copied — opened' : 'Copy and go to Vercel env'}
+            </a>
+            <button
+              type="button"
+              className="secondary"
+              style={{
+                height: '36px',
+                padding: '0 16px',
+                boxSizing: 'border-box',
+                borderRadius: '6px',
+              }}
+              onClick={download}
+            >
               Download .env
             </button>
             <CopyButton
               value={block}
-              className={hostEnvUrl ? 'secondary' : undefined}
+              className="secondary"
               label="Copy env vars"
               copiedLabel="✓ Copied"
             />
           </div>
-        </div>
 
-        <div className="card">
-          <h2>
-            {isLocal
-              ? '2. Paste them into .env and restart'
-              : '2. Paste them in and redeploy — once'}
-          </h2>
-          {isLocal ? (
-            <ol className="steps">
-              <li>
-                Open <code>.env</code> in the root of your project — create it if it is not there
-                yet. It is already in <code>.gitignore</code>, so these values stay off GitHub.
-              </li>
-              <li>
-                Paste the whole block in and save. Replace any of these keys that are already in the
-                file rather than adding a second copy — the last one set wins, and a stale{' '}
-                <code>CHAIBUILDER_APP_KEY</code> points at a site that is not the one just created.
-              </li>
-              <li>
-                Restart the dev server: stop it with <code>Ctrl+C</code> and run{' '}
-                <code>pnpm dev</code> again.
-              </li>
-            </ol>
-          ) : host === 'netlify' ? (
-            <ol className="steps">
-              <li>
-                {hostEnvUrl ? (
-                  <>
-                    The button above opens{' '}
-                    <NewTabLink href={hostEnvUrl}>this site&rsquo;s environment variables</NewTabLink>{' '}
-                    in a new tab.
-                  </>
-                ) : (
-                  <>
-                    In the Netlify dashboard, open this site &rarr;{' '}
-                    <strong>Site configuration</strong> &rarr;{' '}
-                    <strong>Environment variables</strong>.
-                  </>
-                )}
-              </li>
-              <li>
-                Choose <strong>Import from a .env file</strong> and paste the whole block.
-              </li>
-              <li>
-                <strong>Deploys</strong> &rarr; <strong>Trigger deploy</strong>. Usually a minute or
-                two.
-              </li>
-            </ol>
-          ) : (
-            <ol className="steps">
-              <li>
-                {hostEnvUrl ? (
-                  <>
-                    The button above opens{' '}
-                    <NewTabLink href={hostEnvUrl}>
-                      this project&rsquo;s environment variables
-                    </NewTabLink>{' '}
-                    in a new tab.
-                  </>
-                ) : (
-                  <>
-                    Open{' '}
-                    <NewTabLink href="https://vercel.com/dashboard">vercel.com/dashboard</NewTabLink>
-                    , click this project, then <strong>Settings</strong> &rarr;{' '}
-                    <strong>Environment Variables</strong>.
-                  </>
-                )}
-              </li>
-              <li>Paste the whole block and save. Vercel splits it into separate variables.</li>
-              <li>
-                <strong>Deployments</strong> &rarr; <strong>⋯</strong> on the latest one &rarr;{' '}
-                <strong>Redeploy</strong>. Usually a minute or two.
-              </li>
-            </ol>
-          )}
-          <p>
+          <p style={{ marginTop: '24px' }}>
             {isLocal ? 'Once it is back up' : 'When it finishes'}, sign in at <code>/admin</code>{' '}
             with the email and password you just chose.
           </p>

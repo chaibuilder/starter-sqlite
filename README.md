@@ -7,9 +7,9 @@ A website builder you host yourself, built with Next.js and Payload CMS.
 Two ways in. Both ask the same questions and end at the same place — an admin
 account, a database, and a site you can edit at `/admin`.
 
-| | Best for |
-| --- | --- |
-| [**1. The CLI**](#1-the-cli) | Starting a brand new project on your own machine. |
+|                                                         | Best for                                                            |
+| ------------------------------------------------------- | ------------------------------------------------------------------- |
+| [**1. The CLI**](#1-the-cli)                            | Starting a brand new project on your own machine.                   |
 | [**2. Clone and run `/setup`**](#2-clone-and-run-setup) | Working from this repository, or a site already deployed to a host. |
 
 ### 1. The CLI
@@ -98,17 +98,17 @@ Requires Node.js 20.9+ and pnpm 9+.
 The CLI and `/setup` generate these for you, but you can also set them by hand. See
 [`.env.example`](./.env.example) for the full list with comments.
 
-| Variable | Required | What it is |
-| --- | --- | --- |
-| `DATABASE_URL` | Yes | Where content is stored. A local file, or a `libsql://` address for a hosted database. |
-| `DATABASE_AUTH_TOKEN` | For hosted databases | The token that grants access to it. |
-| `PAYLOAD_SECRET` | Yes | Signs login sessions. Generate with `openssl rand -hex 32`. |
-| `CHAIBUILDER_APP_KEY` | Yes | Identifies your site in the database. |
-| `NEXT_PUBLIC_SERVER_URL` | Recommended | Your site's public address, used in sitemaps and share links. |
-| `BUCKET_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Recommended | Object storage for uploads. **Without these, uploaded images are lost on every deploy.** `S3_ENDPOINT` is also needed for Cloudflare R2. |
-| `AI_GATEWAY_API_KEY` | Optional | Enables AI-assisted editing through the Vercel AI Gateway. |
-| `OPENROUTER_API_KEY` | Optional | Enables AI-assisted editing through [OpenRouter](https://openrouter.ai). Use this *or* `AI_GATEWAY_API_KEY`. |
-| `PAYLOAD_ADMIN_ROUTE` | Optional | Serves the admin panel from a custom path. |
+| Variable                                                    | Required             | What it is                                                                                                                               |
+| ----------------------------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                              | Yes                  | Where content is stored. A local file, or a `libsql://` address for a hosted database.                                                   |
+| `DATABASE_AUTH_TOKEN`                                       | For hosted databases | The token that grants access to it.                                                                                                      |
+| `PAYLOAD_SECRET`                                            | Yes                  | Signs login sessions. Generate with `openssl rand -hex 32`.                                                                              |
+| `CHAIBUILDER_APP_KEY`                                       | Yes                  | Identifies your site in the database.                                                                                                    |
+| `NEXT_PUBLIC_SERVER_URL`                                    | Recommended          | Your site's public address, used in sitemaps and share links.                                                                            |
+| `BUCKET_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Recommended          | Object storage for uploads. **Without these, uploaded images are lost on every deploy.** `S3_ENDPOINT` is also needed for Cloudflare R2. |
+| `AI_GATEWAY_API_KEY`                                        | Optional             | Enables AI-assisted editing through the Vercel AI Gateway.                                                                               |
+| `OPENROUTER_API_KEY`                                        | Optional             | Enables AI-assisted editing through [OpenRouter](https://openrouter.ai). Use this _or_ `AI_GATEWAY_API_KEY`.                             |
+| `PAYLOAD_ADMIN_ROUTE`                                       | Optional             | Serves the admin panel from a custom path.                                                                                               |
 
 Visit `/setup` on a configured site at any time to see which of these are in
 place and which are still missing.
@@ -154,13 +154,26 @@ pnpm payload migrate:create    # create one after changing a collection
 
 ## Useful commands
 
-| Command | What it does |
-| --- | --- |
-| `pnpm dev` | Start the development server |
-| `pnpm build` | Build for production |
-| `pnpm start` | Run the production build |
-| `pnpm test:int` | Run integration tests |
-| `pnpm test:e2e` | Run end-to-end tests |
+| Command         | What it does                 |
+| --------------- | ---------------------------- |
+| `pnpm dev`      | Start the development server |
+| `pnpm build`    | Build for production         |
+| `pnpm start`    | Run the production build     |
+| `pnpm test:int` | Run integration tests        |
+| `pnpm test:e2e` | Run end-to-end tests         |
+
+## AI agents (MCP)
+
+This site exposes a [Model Context Protocol](https://modelcontextprotocol.io) endpoint at
+`/api/mcp`, so an MCP-capable client (Claude, Cursor, VS Code, …) can edit your content with
+plain-language commands. Point the client at `<your-site>/api/mcp` and authenticate with a
+ChaiBuilder API key from your account.
+
+An agent acts with exactly the permissions of the key it uses — an unauthenticated request is
+refused rather than falling back to a browser session, edits land as drafts until published, and
+every change is versioned and reversible. See
+[chaibuilder.com/docs/ai/mcp-setup](https://www.chaibuilder.com/docs/ai/mcp-setup) for the full
+guide and ready-to-copy client configuration.
 
 ## Documentation
 

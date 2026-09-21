@@ -167,7 +167,8 @@ pnpm payload migrate:create    # create one after changing a collection
 This site exposes a [Model Context Protocol](https://modelcontextprotocol.io) endpoint at
 `/api/mcp`, so an MCP-capable client (Claude, Cursor, VS Code, …) can edit your content with
 plain-language commands. Point the client at `<your-site>/api/mcp` and authenticate with a
-ChaiBuilder API key from your account.
+per-user API key: open your user in the admin panel, tick **Enable API Key**, and use the
+generated key as the client's bearer token.
 
 An agent acts with exactly the permissions of the key it uses — an unauthenticated request is
 refused rather than falling back to a browser session, edits land as drafts until published, and

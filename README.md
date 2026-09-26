@@ -179,7 +179,9 @@ guide and ready-to-copy client configuration.
 If the client reports `Dynamic Client Registration rejected (HTTP 404)`, the endpoint refused the
 key with a 401 and the client fell back to OAuth, which this site does not offer. Check that the
 `Authorization` header reaches the server as `Bearer <key>`, that **Enable API Key** is saved on
-that user, and that the user is a member of this site (`CHAIBUILDER_APP_KEY`).
+that user, and that the user is a member of this site (`CHAIBUILDER_APP_KEY`). A site set up
+before the API-key migration also needs `pnpm payload migrate` run against its database. Each
+refused request is logged on the server with the reason, prefixed `[mcp] Refused`.
 
 ## Documentation
 

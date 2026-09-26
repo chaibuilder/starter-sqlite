@@ -22,6 +22,24 @@ const handlers = createChaiMcpRouteHandlers({
   // shared `ChaiBuilderInstance<any>` surface, so we widen the resolver to its expected type.
   getChaiBuilder: ((request) =>
     getChaiBuilder({}, request)) as ChaiMcpRouteOptions['getChaiBuilder'],
+  // A refused request reaches the client as a bare 401/403, and MCP clients then fall back to
+  // an OAuth flow this site does not offer, which buries the cause. Say why in the server log
+  // (never the key itself) so a failing connection can be diagnosed from the host's logs.
+  onAuthFailure: ({ reason, request, userId, missingPermission }) => {
+    let cause: string
+    if (reason === 'forbidden') {
+      cause = `user ${userId} lacks the "${missingPermission}" permission`
+    } else if (!request.headers.get('authorization')) {
+      cause = 'no Authorization header was sent'
+    } else if (!userId) {
+      cause =
+        'the API key did not match any user: check the key, that "Enable API Key" is saved on ' +
+        'the user, and that `payload migrate` has been run against this database'
+    } else {
+      cause = `user ${userId} is not an active member of this site (CHAIBUILDER_APP_KEY)`
+    }
+    console.warn(`[mcp] Refused ${request.method} /api/mcp: ${cause}.`)
+  },
 })
 
 export const { GET, POST, DELETE } = handlers

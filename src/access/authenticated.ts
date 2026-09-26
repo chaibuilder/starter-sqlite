@@ -1,3 +1,6 @@
+import type { SQLiteAdapter } from '@payloadcms/db-sqlite'
+// Payload's copy of the operators: queries on its transaction must use its drizzle-orm.
+import { and as payloadAnd, eq as payloadEq } from '@payloadcms/db-sqlite/drizzle'
 import type { Access, PayloadRequest } from 'payload'
 import { randomUUID } from 'crypto'
 import { and, eq } from 'drizzle-orm'
@@ -142,37 +145,47 @@ export async function getAppRoleForUser(userId: string): Promise<AppRole | null>
  * Set a user's role in the current app: reactivate/update their existing `app_users` row if one
  * exists (any status), otherwise insert a new active membership. `app_users` has no unique
  * (user, app) constraint, so we look up before writing rather than relying on upsert.
+ *
+ * Runs on the request's own Payload transaction (the same lookup as `getTransaction` in
+ * `@payloadcms/drizzle`), not the ChaiBuilder client. Called from a Users `afterChange` hook,
+ * that transaction still holds the write lock: a second connection's write has to wait for it,
+ * and on a hosted libSQL database (Turso) the wait outlasts the transaction's lease, which is
+ * then rolled back. Payload swallows that commit failure, so the save answers 200 while
+ * nothing on the user (e.g. Enable API Key) is kept.
  */
-export async function setAppRoleForUser(userId: string, role: AppRole): Promise<void> {
+export async function setAppRoleForUser(
+  req: PayloadRequest,
+  userId: string,
+  role: AppRole,
+): Promise<void> {
   const appId = process.env.CHAIBUILDER_APP_KEY
   if (!appId) throw new Error('CHAIBUILDER_APP_KEY not set')
 
-  const cb = await getCb()
-  const { data: existing, error: selError } = await cb.safeQuery(({ db, schema }) =>
-    db
-      .select({ id: schema.appUsers.id })
-      .from(schema.appUsers)
-      .where(and(eq(schema.appUsers.user, userId), eq(schema.appUsers.app, appId)))
-      .limit(1),
-  )
-  if (selError) throw selError
+  const adapter = req.payload.db as unknown as SQLiteAdapter
+  const session = req.transactionID ? adapter.sessions[await req.transactionID] : undefined
+  const db = (session?.db as SQLiteAdapter['drizzle'] | undefined) ?? adapter.drizzle
+  const appUsers = adapter.tables.appUsers
 
-  const row = existing?.[0]
-  const { error: writeError } = await cb.safeQuery(({ db, schema }) =>
-    row
-      ? db
-          .update(schema.appUsers)
-          .set({ role, status: 'active' })
-          .where(eq(schema.appUsers.id, row.id))
-      : db.insert(schema.appUsers).values({
-          id: randomUUID(),
-          user: userId,
-          app: appId,
-          role,
-          status: 'active',
-        }),
-  )
-  if (writeError) throw writeError
+  const [row] = await db
+    .select({ id: appUsers.id })
+    .from(appUsers)
+    .where(payloadAnd(payloadEq(appUsers.user, userId), payloadEq(appUsers.app, appId)))
+    .limit(1)
+
+  if (row) {
+    await db
+      .update(appUsers)
+      .set({ role, status: 'active' })
+      .where(payloadEq(appUsers.id, row.id as string))
+  } else {
+    await db.insert(appUsers).values({
+      id: randomUUID(),
+      user: userId,
+      app: appId,
+      role,
+      status: 'active',
+    })
+  }
 }
 
 /** Restricted to the global platform owner. Use for collections holding secrets/PII. */

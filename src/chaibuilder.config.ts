@@ -14,6 +14,7 @@ import {
 } from 'chaipro/payload'
 import { aiPlugin } from 'chaipro/plugins/ai-pro/server'
 import { animationPlugin } from 'chaipro/plugins/animation/server'
+import { mcpPlugin } from 'chaipro/plugins/mcp/server'
 import { redirectsPlugin } from 'chaipro/plugins/redirects/server'
 import { revisionsPlugin } from 'chaipro/plugins/revisions/server'
 import { trashPlugin } from 'chaipro/plugins/trash/server'
@@ -124,6 +125,13 @@ const chaiConfig: Readonly<ResolvedChaiBuilderServerConfig> = buildChaiBuilderCo
     aiPlugin(),
     revisionsPlugin({ drafts: true, maxRevisions: 10 }),
     animationPlugin(),
+    // The tools served by the MCP endpoint at `/api/mcp`. Without this plugin the route
+    // still authenticates but lists no tools. Preview links go through this app's own
+    // draft-mode route rather than the plugin's default `/chai/preview`.
+    mcpPlugin({
+      previewUrl: ({ baseUrl, slug }) =>
+        `${baseUrl}/next/preview?path=${encodeURIComponent(slug)}`,
+    }),
   ],
   ai: {
     providers: process.env.OPENROUTER_API_KEY ? [openRouterProvider] : undefined,

@@ -176,6 +176,11 @@ every change is versioned and reversible. See
 [chaibuilder.com/docs/ai/mcp-setup](https://www.chaibuilder.com/docs/ai/mcp-setup) for the full
 guide and ready-to-copy client configuration.
 
+If the client reports `Dynamic Client Registration rejected (HTTP 404)`, the endpoint refused the
+key with a 401 and the client fell back to OAuth, which this site does not offer. Check that the
+`Authorization` header reaches the server as `Bearer <key>`, that **Enable API Key** is saved on
+that user, and that the user is a member of this site (`CHAIBUILDER_APP_KEY`).
+
 ## Documentation
 
 Full documentation is at [chaibuilder.com/docs](https://www.chaibuilder.com/docs).

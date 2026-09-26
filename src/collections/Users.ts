@@ -40,6 +40,9 @@ export const Users: CollectionConfig = {
     ],
   },
   auth: {
+    // Enables per-user API keys. An MCP client (see `/api/mcp`) authenticates as the
+    // user who owns the key and acts strictly within that user's permissions.
+    useAPIKey: true,
     forgotPassword: {
       expiration: 1000 * 60 * 60, // 1 hour
       generateEmailSubject: (args) =>

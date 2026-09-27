@@ -34,7 +34,7 @@ export const Users: CollectionConfig = {
     afterChange: [
       async ({ doc, req }) => {
         const role = (req.context?.appRole ?? undefined) as AppRole | undefined
-        if (role) await setAppRoleForUser(String(doc.id), role)
+        if (role) await setAppRoleForUser(req, String(doc.id), role)
         return doc
       },
     ],

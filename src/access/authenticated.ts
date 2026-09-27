@@ -1,3 +1,5 @@
+import type { MigrateUpArgs, SQLiteAdapter } from '@payloadcms/db-sqlite'
+import { sql } from '@payloadcms/db-sqlite'
 import type { Access, PayloadRequest } from 'payload'
 import { randomUUID } from 'crypto'
 import { and, eq } from 'drizzle-orm'
@@ -142,37 +144,40 @@ export async function getAppRoleForUser(userId: string): Promise<AppRole | null>
  * Set a user's role in the current app: reactivate/update their existing `app_users` row if one
  * exists (any status), otherwise insert a new active membership. `app_users` has no unique
  * (user, app) constraint, so we look up before writing rather than relying on upsert.
+ *
+ * Runs on the request's Payload transaction, not the ChaiBuilder client. This is called from the
+ * Users `afterChange` hook while Payload's update still holds the write lock; a write from a
+ * second connection waits on that lock, which on remote libSQL (Turso) fails as
+ * "database is locked".
  */
-export async function setAppRoleForUser(userId: string, role: AppRole): Promise<void> {
+export async function setAppRoleForUser(
+  req: PayloadRequest,
+  userId: string,
+  role: AppRole,
+): Promise<void> {
   const appId = process.env.CHAIBUILDER_APP_KEY
   if (!appId) throw new Error('CHAIBUILDER_APP_KEY not set')
 
-  const cb = await getCb()
-  const { data: existing, error: selError } = await cb.safeQuery(({ db, schema }) =>
-    db
-      .select({ id: schema.appUsers.id })
-      .from(schema.appUsers)
-      .where(and(eq(schema.appUsers.user, userId), eq(schema.appUsers.app, appId)))
-      .limit(1),
-  )
-  if (selError) throw selError
+  const adapter = req.payload.db as unknown as SQLiteAdapter
+  const transactionID = req.transactionID ? await req.transactionID : undefined
+  // Same lookup as Payload's own `getTransaction`: the open session, else the base connection.
+  const db = ((transactionID !== undefined && adapter.sessions?.[transactionID]?.db) ||
+    adapter.drizzle) as MigrateUpArgs['db']
 
-  const row = existing?.[0]
-  const { error: writeError } = await cb.safeQuery(({ db, schema }) =>
-    row
-      ? db
-          .update(schema.appUsers)
-          .set({ role, status: 'active' })
-          .where(eq(schema.appUsers.id, row.id))
-      : db.insert(schema.appUsers).values({
-          id: randomUUID(),
-          user: userId,
-          app: appId,
-          role,
-          status: 'active',
-        }),
+  const existing = await db.all<{ id: string }>(
+    sql`SELECT "id" FROM "app_users" WHERE "user" = ${userId} AND "app" = ${appId} LIMIT 1`,
   )
-  if (writeError) throw writeError
+  const row = existing[0]
+  if (row) {
+    await db.run(
+      sql`UPDATE "app_users" SET "role" = ${role}, "status" = 'active' WHERE "id" = ${row.id}`,
+    )
+  } else {
+    await db.run(
+      sql`INSERT INTO "app_users" ("id", "user", "app", "role", "status")
+        VALUES (${randomUUID()}, ${userId}, ${appId}, ${role}, 'active')`,
+    )
+  }
 }
 
 /** Restricted to the global platform owner. Use for collections holding secrets/PII. */

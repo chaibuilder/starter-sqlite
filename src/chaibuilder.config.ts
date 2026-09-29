@@ -128,9 +128,13 @@ const chaiConfig: Readonly<ResolvedChaiBuilderServerConfig> = buildChaiBuilderCo
     // The tools served by the MCP endpoint at `/api/mcp`. Without this plugin the route
     // still authenticates but lists no tools. Preview links go through this app's own
     // draft-mode route rather than the plugin's default `/chai/preview`.
+    // `designSystem` registers the design-system tools (read/save a site's design
+    // system, design checks, theme/token editing); a site is unaffected until its
+    // design system is set up and enabled. Block writes get warning-level checks.
     mcpPlugin({
       previewUrl: ({ baseUrl, slug }) =>
         `${baseUrl}/next/preview?path=${encodeURIComponent(slug)}`,
+      designSystem: true,
     }),
   ],
   ai: {

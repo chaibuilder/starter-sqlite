@@ -50,6 +50,15 @@ export const Media: CollectionConfig = {
       },
       defaultValue: () => getMediaStoragePrefix(),
     },
+    // Same reasoning as `prefix`: s3Storage only adds `_objectKey` when the bucket env vars are set.
+    {
+      name: '_objectKey',
+      type: 'text',
+      admin: {
+        hidden: true,
+        readOnly: true,
+      },
+    },
   ],
   upload: true,
 }
